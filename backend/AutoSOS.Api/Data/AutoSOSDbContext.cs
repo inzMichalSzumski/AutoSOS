@@ -39,6 +39,12 @@ public class AutoSOSDbContext : DbContext
             entity.Property(e => e.CreatedAt).IsRequired();
             
             entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.UserId);
+            
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Offer configuration
