@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import { Icon } from 'leaflet'
-import { HelpRequest, Location } from '../App'
+import type { HelpRequest, Location } from '../types'
 
 // Fix dla ikon Leaflet w Vite
 import 'leaflet/dist/leaflet.css'
