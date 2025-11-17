@@ -10,7 +10,6 @@ interface OperatorListProps {
 }
 
 export default function OperatorList({
-  request,
   operators,
   onSelect,
   selectedOperator,
