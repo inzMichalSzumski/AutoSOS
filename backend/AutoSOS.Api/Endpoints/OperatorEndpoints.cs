@@ -16,8 +16,8 @@ public static class OperatorEndpoints
         group.MapGet("/", async (
             double lat,
             double lng,
-            double radius = 20,
-            AutoSOSDbContext db) =>
+            AutoSOSDbContext db,
+            double radius = 20) =>
         {
             var operators = await db.Operators
                 .Include(o => o.User)

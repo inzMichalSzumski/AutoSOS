@@ -85,11 +85,8 @@ export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
 
     setIsSubmitting(true)
 
-    // Symulacja opóźnienia
-    await new Promise(resolve => setTimeout(resolve, 500))
-
     const request: HelpRequest = {
-      id: `REQ-${Date.now()}`,
+      id: '', // ID zostanie ustawione przez backend
       phoneNumber,
       description,
       fromLocation,

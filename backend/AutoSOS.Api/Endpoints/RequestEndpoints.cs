@@ -20,9 +20,28 @@ public static class RequestEndpoints
             AutoSOSDbContext db,
             IHubContext<RequestHub> hub) =>
         {
+            // Znajdź lub utwórz User dla klienta
+            var user = await db.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == dto.PhoneNumber && u.Role == UserRole.Customer);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    Id = Guid.NewGuid(),
+                    PhoneNumber = dto.PhoneNumber,
+                    Role = UserRole.Customer,
+                    IsVerified = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+                db.Users.Add(user);
+                await db.SaveChangesAsync();
+            }
+
             var request = new Request
             {
                 Id = Guid.NewGuid(),
+                UserId = user.Id,
                 PhoneNumber = dto.PhoneNumber,
                 FromLatitude = dto.FromLatitude,
                 FromLongitude = dto.FromLongitude,
