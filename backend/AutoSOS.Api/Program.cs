@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using AutoSOS.Api.Data;
 using AutoSOS.Api.Hubs;
 using AutoSOS.Api.Models;
@@ -10,6 +13,25 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddEndpointsApiExplorer();
+
+// Authentication & Authorization
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 // Database
 builder.Services.AddDbContext<AutoSOSDbContext>(options =>
@@ -45,11 +67,14 @@ await using (var scope = app.Services.CreateAsyncScope())
 // Configure the HTTP request pipeline
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+app.UseAuthentication();
+app.UseAuthorization();
 
 // SignalR Hub
 app.MapHub<RequestHub>("/hubs/request");
 
 // API Endpoints
+app.MapAuthEndpoints();
 app.MapRequestEndpoints();
 app.MapOperatorEndpoints();
 app.MapOfferEndpoints();

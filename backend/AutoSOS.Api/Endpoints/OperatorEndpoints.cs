@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using AutoSOS.Api.Data;
 using AutoSOS.Api.Services;
+using AutoSOS.Api.DTOs;
 
 namespace AutoSOS.Api.Endpoints;
 
@@ -12,7 +14,7 @@ public static class OperatorEndpoints
             .WithTags("Operators")
             .WithOpenApi();
 
-        // GET /api/operators - Wyszukiwanie operatorów w promieniu
+        // GET /api/operators - Wyszukiwanie operatorów w promieniu (publiczny)
         group.MapGet("/", async (
             double lat,
             double lng,
@@ -54,6 +56,87 @@ public static class OperatorEndpoints
         })
         .WithName("GetOperators")
         .WithOpenApi();
+
+        // PUT /api/operators/{id}/location - Aktualizacja lokalizacji operatora
+        group.MapPut("/{id}/location", async (
+            Guid id,
+            UpdateLocationDto dto,
+            AutoSOSDbContext db,
+            HttpContext context) =>
+        {
+            // Pobierz operatorId z tokenu JWT
+            var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
+            if (operatorIdClaim == null || !Guid.TryParse(operatorIdClaim, out var tokenOperatorId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Sprawdź czy operator aktualizuje swoją własną lokalizację
+            if (tokenOperatorId != id)
+            {
+                return Results.Forbid();
+            }
+
+            var operatorEntity = await db.Operators.FindAsync(id);
+            if (operatorEntity == null)
+            {
+                return Results.NotFound(new { error = "Operator nie został znaleziony" });
+            }
+
+            operatorEntity.CurrentLatitude = dto.Latitude;
+            operatorEntity.CurrentLongitude = dto.Longitude;
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { success = true, message = "Lokalizacja zaktualizowana" });
+        })
+        .RequireAuthorization()
+        .WithName("UpdateOperatorLocation")
+        .WithOpenApi();
+
+        // PUT /api/operators/{id}/availability - Zmiana dostępności operatora
+        group.MapPut("/{id}/availability", async (
+            Guid id,
+            UpdateAvailabilityDto dto,
+            AutoSOSDbContext db,
+            HttpContext context) =>
+        {
+            // Pobierz operatorId z tokenu JWT
+            var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
+            if (operatorIdClaim == null || !Guid.TryParse(operatorIdClaim, out var tokenOperatorId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Sprawdź czy operator aktualizuje swoją własną dostępność
+            if (tokenOperatorId != id)
+            {
+                return Results.Forbid();
+            }
+
+            var operatorEntity = await db.Operators.FindAsync(id);
+            if (operatorEntity == null)
+            {
+                return Results.NotFound(new { error = "Operator nie został znaleziony" });
+            }
+
+            operatorEntity.IsAvailable = dto.IsAvailable;
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { 
+                success = true, 
+                message = dto.IsAvailable ? "Jesteś teraz dostępny" : "Jesteś teraz niedostępny",
+                isAvailable = operatorEntity.IsAvailable
+            });
+        })
+        .RequireAuthorization()
+        .WithName("UpdateOperatorAvailability")
+        .WithOpenApi();
     }
 }
+
+// DTOs dla endpointów operatora
+public record UpdateLocationDto(double Latitude, double Longitude);
+public record UpdateAvailabilityDto(bool IsAvailable);
 

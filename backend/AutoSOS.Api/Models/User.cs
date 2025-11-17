@@ -9,6 +9,9 @@ public class User
     public UserRole Role { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public bool IsVerified { get; set; } = false; // Dla SMS OTP
+    
+    // Navigation property
+    public Operator? Operator { get; set; }
 }
 
 public enum UserRole

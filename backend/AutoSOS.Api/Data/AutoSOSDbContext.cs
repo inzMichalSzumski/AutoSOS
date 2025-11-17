@@ -76,7 +76,7 @@ public class AutoSOSDbContext : DbContext
             entity.Property(e => e.IsAvailable).IsRequired();
             
             entity.HasOne(e => e.User)
-                .WithOne()
+                .WithOne(u => u.Operator)
                 .HasForeignKey<Operator>(e => e.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });

@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { authService } from './auth';
 
 export interface CreateRequestDto {
   phoneNumber: string;
@@ -50,12 +51,21 @@ class ApiClient {
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     
+    // Pobierz token JWT jeśli istnieje
+    const token = authService.getToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options?.headers as Record<string, string>),
+    };
+    
+    // Dodaj token do nagłówka jeśli istnieje
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -106,6 +116,22 @@ class ApiClient {
   async acceptOffer(offerId: string): Promise<OfferResponse> {
     return this.request<OfferResponse>(`/api/offers/${offerId}/accept`, {
       method: 'POST',
+    });
+  }
+
+  // Endpointy dla operatorów (wymagają autentykacji)
+  
+  async updateOperatorLocation(operatorId: string, latitude: number, longitude: number): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>(`/api/operators/${operatorId}/location`, {
+      method: 'PUT',
+      body: JSON.stringify({ latitude, longitude }),
+    });
+  }
+
+  async updateOperatorAvailability(operatorId: string, isAvailable: boolean): Promise<{ success: boolean; isAvailable: boolean }> {
+    return this.request<{ success: boolean; isAvailable: boolean }>(`/api/operators/${operatorId}/availability`, {
+      method: 'PUT',
+      body: JSON.stringify({ isAvailable }),
     });
   }
 }
