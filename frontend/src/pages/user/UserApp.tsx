@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import HelpRequestForm from '../../components/HelpRequestForm'
 import OperatorList from '../../components/OperatorList'
 import RequestStatus from '../../components/RequestStatus'
@@ -108,7 +109,20 @@ export default function UserApp() {
   if (!currentRequest) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="container mx-auto px-4 py-8 max-w-2xl">
+        {/* Header z przyciskiem do panelu operatora */}
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-end">
+            <Link
+              to="/operator/login"
+              className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-md transition-colors"
+            >
+              <span>👔</span>
+              <span>Jesteś operatorem?</span>
+            </Link>
+          </div>
+        </div>
+
+        <div className="container mx-auto px-4 py-4 max-w-2xl">
           <div className="text-center mb-8">
             <h1 className="text-5xl font-bold text-gray-900 mb-2">
               🚗 AutoSOS
