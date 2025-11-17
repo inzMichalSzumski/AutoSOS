@@ -2,6 +2,7 @@ import { useState } from 'react'
 import HelpRequestForm from './components/HelpRequestForm'
 import OperatorList from './components/OperatorList'
 import RequestStatus from './components/RequestStatus'
+import { apiClient } from './services/api'
 
 export interface Location {
   lat: number
@@ -24,6 +25,7 @@ export interface Operator {
   estimatedPrice?: number
   estimatedTime?: number // w minutach
   vehicleType: string
+  offerId?: string // ID oferty z backendu
 }
 
 export type RequestStatusType = 'draft' | 'searching' | 'offer_received' | 'accepted' | 'on_the_way' | 'completed'
@@ -34,43 +36,90 @@ function App() {
   const [requestStatus, setRequestStatus] = useState<RequestStatusType>('draft')
   const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null)
 
-  const handleRequestSubmit = (request: HelpRequest) => {
-    setCurrentRequest(request)
-    setRequestStatus('searching')
-    // TODO: Połączenie z backendem - pobranie dostępnych operatorów
-    // Na razie mock danych
-    setAvailableOperators([
-      {
-        id: '1',
-        name: 'Laweta Express',
-        phone: '+48 123 456 789',
-        distance: 2.5,
-        estimatedPrice: 150,
-        estimatedTime: 15,
-        vehicleType: 'Laweta'
-      },
-      {
-        id: '2',
-        name: 'Pomoc Drogowa 24h',
-        phone: '+48 987 654 321',
-        distance: 5.1,
-        estimatedPrice: 200,
-        estimatedTime: 25,
-        vehicleType: 'Laweta'
+  const handleRequestSubmit = async (request: HelpRequest) => {
+    try {
+      // 1. Utwórz zgłoszenie w backendzie
+      const response = await apiClient.createRequest({
+        phoneNumber: request.phoneNumber,
+        fromLatitude: request.fromLocation.lat,
+        fromLongitude: request.fromLocation.lng,
+        toLatitude: request.toLocation?.lat,
+        toLongitude: request.toLocation?.lng,
+        description: request.description,
+      })
+
+      // 2. Zaktualizuj request z ID z backendu
+      const updatedRequest: HelpRequest = {
+        ...request,
+        id: response.id,
       }
-    ])
+      setCurrentRequest(updatedRequest)
+      setRequestStatus('searching')
+
+      // 3. Pobierz dostępnych operatorów
+      const operatorsResponse = await apiClient.getOperators(
+        request.fromLocation.lat,
+        request.fromLocation.lng,
+        20
+      )
+
+      // 4. Mapuj odpowiedź z backendu na format frontendu
+      const operators: Operator[] = operatorsResponse.operators.map((op) => ({
+        id: op.id,
+        name: op.name,
+        phone: op.phone,
+        distance: op.distance,
+        vehicleType: op.vehicleType,
+      }))
+
+      setAvailableOperators(operators)
+    } catch (error) {
+      console.error('Błąd podczas tworzenia zgłoszenia:', error)
+      alert('Nie udało się utworzyć zgłoszenia. Spróbuj ponownie.')
+    }
   }
 
-  const handleOperatorSelect = (operator: Operator) => {
-    setSelectedOperator(operator)
-    setRequestStatus('offer_received')
-    // TODO: Wysyłanie akceptacji do backendu
+  const handleOperatorSelect = async (operator: Operator) => {
+    if (!currentRequest) return
+
+    try {
+      // Operator składa ofertę (symulacja - w prawdziwej aplikacji operator robi to przez swoje API)
+      // Na razie używamy przykładowej ceny i czasu
+      const estimatedPrice = 150 + Math.floor(Math.random() * 100)
+      const estimatedTime = 15 + Math.floor(Math.random() * 20)
+
+      const offerResponse = await apiClient.createOffer({
+        requestId: currentRequest.id,
+        operatorId: operator.id,
+        price: estimatedPrice,
+        estimatedTimeMinutes: estimatedTime,
+      })
+
+      setSelectedOperator({
+        ...operator,
+        estimatedPrice,
+        estimatedTime,
+        offerId: offerResponse.id,
+      })
+      setRequestStatus('offer_received')
+    } catch (error) {
+      console.error('Błąd podczas składania oferty:', error)
+      alert('Nie udało się złożyć oferty. Spróbuj ponownie.')
+    }
   }
 
-  const handleAcceptOffer = () => {
-    if (selectedOperator) {
+  const handleAcceptOffer = async () => {
+    if (!selectedOperator || !selectedOperator.offerId) {
+      alert('Brak oferty do akceptacji')
+      return
+    }
+
+    try {
+      await apiClient.acceptOffer(selectedOperator.offerId)
       setRequestStatus('accepted')
-      // TODO: Wysyłanie do backendu
+    } catch (error) {
+      console.error('Błąd podczas akceptacji oferty:', error)
+      alert('Nie udało się zaakceptować oferty. Spróbuj ponownie.')
     }
   }
 
