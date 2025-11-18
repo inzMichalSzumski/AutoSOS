@@ -40,7 +40,7 @@ builder.Services.AddDbContext<AutoSOSDbContext>(options =>
 // SignalR
 builder.Services.AddSignalR();
 
-// CORS - pozwól frontendowi na GitHub Pages
+// CORS - allow frontend from GitHub Pages
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>

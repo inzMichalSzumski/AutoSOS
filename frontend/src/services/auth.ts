@@ -31,7 +31,7 @@ export const authService = {
     
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.error || 'Błąd rejestracji')
+      throw new Error(error.error || 'Registration error')
     }
     
     return response.json()
@@ -45,12 +45,12 @@ export const authService = {
     })
     
     if (!response.ok) {
-      throw new Error('Nieprawidłowy email lub hasło')
+      throw new Error('Invalid email or password')
     }
     
     const authData = await response.json()
     
-    // Zapisz token w localStorage
+    // Save token in localStorage
     localStorage.setItem('authToken', authData.token)
     localStorage.setItem('operatorId', authData.operatorId)
     localStorage.setItem('operatorName', authData.name)

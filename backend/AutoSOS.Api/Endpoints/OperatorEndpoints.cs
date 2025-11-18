@@ -14,7 +14,7 @@ public static class OperatorEndpoints
             .WithTags("Operators")
             .WithOpenApi();
 
-        // GET /api/operators - Wyszukiwanie operatorów w promieniu (publiczny)
+        // GET /api/operators - Search for operators within radius (public)
         group.MapGet("/", async (
             double lat,
             double lng,
@@ -57,21 +57,21 @@ public static class OperatorEndpoints
         .WithName("GetOperators")
         .WithOpenApi();
 
-        // PUT /api/operators/{id}/location - Aktualizacja lokalizacji operatora
+        // PUT /api/operators/{id}/location - Update operator location
         group.MapPut("/{id}/location", async (
             Guid id,
             UpdateLocationDto dto,
             AutoSOSDbContext db,
             HttpContext context) =>
         {
-            // Pobierz operatorId z tokenu JWT
+            // Get operatorId from JWT token
             var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
             if (operatorIdClaim == null || !Guid.TryParse(operatorIdClaim, out var tokenOperatorId))
             {
                 return Results.Unauthorized();
             }
 
-            // Sprawdź czy operator aktualizuje swoją własną lokalizację
+            // Check if operator is updating their own location
             if (tokenOperatorId != id)
             {
                 return Results.Forbid();
@@ -80,7 +80,7 @@ public static class OperatorEndpoints
             var operatorEntity = await db.Operators.FindAsync(id);
             if (operatorEntity == null)
             {
-                return Results.NotFound(new { error = "Operator nie został znaleziony" });
+                return Results.NotFound(new { error = "Operator not found" });
             }
 
             operatorEntity.CurrentLatitude = dto.Latitude;
@@ -88,27 +88,27 @@ public static class OperatorEndpoints
 
             await db.SaveChangesAsync();
 
-            return Results.Ok(new { success = true, message = "Lokalizacja zaktualizowana" });
+            return Results.Ok(new { success = true, message = "Location updated" });
         })
         .RequireAuthorization()
         .WithName("UpdateOperatorLocation")
         .WithOpenApi();
 
-        // PUT /api/operators/{id}/availability - Zmiana dostępności operatora
+        // PUT /api/operators/{id}/availability - Update operator availability
         group.MapPut("/{id}/availability", async (
             Guid id,
             UpdateAvailabilityDto dto,
             AutoSOSDbContext db,
             HttpContext context) =>
         {
-            // Pobierz operatorId z tokenu JWT
+            // Get operatorId from JWT token
             var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
             if (operatorIdClaim == null || !Guid.TryParse(operatorIdClaim, out var tokenOperatorId))
             {
                 return Results.Unauthorized();
             }
 
-            // Sprawdź czy operator aktualizuje swoją własną dostępność
+            // Check if operator is updating their own availability
             if (tokenOperatorId != id)
             {
                 return Results.Forbid();
@@ -117,7 +117,7 @@ public static class OperatorEndpoints
             var operatorEntity = await db.Operators.FindAsync(id);
             if (operatorEntity == null)
             {
-                return Results.NotFound(new { error = "Operator nie został znaleziony" });
+                return Results.NotFound(new { error = "Operator not found" });
             }
 
             operatorEntity.IsAvailable = dto.IsAvailable;
@@ -126,7 +126,7 @@ public static class OperatorEndpoints
 
             return Results.Ok(new { 
                 success = true, 
-                message = dto.IsAvailable ? "Jesteś teraz dostępny" : "Jesteś teraz niedostępny",
+                message = dto.IsAvailable ? "You are now available" : "You are now unavailable",
                 isAvailable = operatorEntity.IsAvailable
             });
         })
@@ -136,7 +136,7 @@ public static class OperatorEndpoints
     }
 }
 
-// DTOs dla endpointów operatora
+// DTOs for operator endpoints
 public record UpdateLocationDto(double Latitude, double Longitude);
 public record UpdateAvailabilityDto(bool IsAvailable);
 

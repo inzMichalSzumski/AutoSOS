@@ -14,7 +14,7 @@ export default function UserApp() {
 
   const handleRequestSubmit = async (request: HelpRequest) => {
     try {
-      // 1. Utwórz zgłoszenie w backendzie
+      // 1. Create request in backend
       const response = await apiClient.createRequest({
         phoneNumber: request.phoneNumber,
         fromLatitude: request.fromLocation.lat,
@@ -24,7 +24,7 @@ export default function UserApp() {
         description: request.description,
       })
 
-      // 2. Zaktualizuj request z ID z backendu
+      // 2. Update request with ID from backend
       const updatedRequest: HelpRequest = {
         ...request,
         id: response.id,
@@ -32,14 +32,14 @@ export default function UserApp() {
       setCurrentRequest(updatedRequest)
       setRequestStatus('searching')
 
-      // 3. Pobierz dostępnych operatorów
+      // 3. Fetch available operators
       const operatorsResponse = await apiClient.getOperators(
         request.fromLocation.lat,
         request.fromLocation.lng,
         20
       )
 
-      // 4. Mapuj odpowiedź z backendu na format frontendu
+      // 4. Map backend response to frontend format
       const operators: Operator[] = operatorsResponse.operators.map((op) => ({
         id: op.id,
         name: op.name,
@@ -50,8 +50,8 @@ export default function UserApp() {
 
       setAvailableOperators(operators)
     } catch (error) {
-      console.error('Błąd podczas tworzenia zgłoszenia:', error)
-      alert('Nie udało się utworzyć zgłoszenia. Spróbuj ponownie.')
+      console.error('Error creating request:', error)
+      alert('Failed to create request. Please try again.')
     }
   }
 
@@ -59,8 +59,8 @@ export default function UserApp() {
     if (!currentRequest) return
 
     try {
-      // Operator składa ofertę (symulacja - w prawdziwej aplikacji operator robi to przez swoje API)
-      // Na razie używamy przykładowej ceny i czasu
+      // Operator submits offer (simulation - in real app operator does this through their API)
+      // For now we use sample price and time
       const estimatedPrice = 150 + Math.floor(Math.random() * 100)
       const estimatedTime = 15 + Math.floor(Math.random() * 20)
 
@@ -79,14 +79,14 @@ export default function UserApp() {
       })
       setRequestStatus('offer_received')
     } catch (error) {
-      console.error('Błąd podczas składania oferty:', error)
-      alert('Nie udało się złożyć oferty. Spróbuj ponownie.')
+      console.error('Error submitting offer:', error)
+      alert('Failed to submit offer. Please try again.')
     }
   }
 
   const handleAcceptOffer = async () => {
     if (!selectedOperator || !selectedOperator.offerId) {
-      alert('Brak oferty do akceptacji')
+      alert('No offer to accept')
       return
     }
 
@@ -94,8 +94,8 @@ export default function UserApp() {
       await apiClient.acceptOffer(selectedOperator.offerId)
       setRequestStatus('accepted')
     } catch (error) {
-      console.error('Błąd podczas akceptacji oferty:', error)
-      alert('Nie udało się zaakceptować oferty. Spróbuj ponownie.')
+      console.error('Error accepting offer:', error)
+      alert('Failed to accept offer. Please try again.')
     }
   }
 
@@ -109,7 +109,7 @@ export default function UserApp() {
   if (!currentRequest) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        {/* Header z przyciskiem do panelu operatora */}
+        {/* Header with button to operator panel */}
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-end">
             <Link

@@ -51,14 +51,14 @@ class ApiClient {
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     
-    // Pobierz token JWT jeśli istnieje
+    // Get JWT token if exists
     const token = authService.getToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options?.headers as Record<string, string>),
     };
     
-    // Dodaj token do nagłówka jeśli istnieje
+    // Add token to header if exists
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -119,7 +119,7 @@ class ApiClient {
     });
   }
 
-  // Endpointy dla operatorów (wymagają autentykacji)
+  // Operator endpoints (require authentication)
   
   async updateOperatorLocation(operatorId: string, latitude: number, longitude: number): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/api/operators/${operatorId}/location`, {

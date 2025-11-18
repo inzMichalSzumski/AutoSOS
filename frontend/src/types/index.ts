@@ -17,11 +17,11 @@ export interface Operator {
   id: string
   name: string
   phone: string
-  distance: number // w km
+  distance: number // in km
   estimatedPrice?: number
-  estimatedTime?: number // w minutach
+  estimatedTime?: number // in minutes
   vehicleType: string
-  offerId?: string // ID oferty z backendu
+  offerId?: string // Offer ID from backend
 }
 
 export type RequestStatusType = 'draft' | 'searching' | 'offer_received' | 'accepted' | 'on_the_way' | 'completed'

@@ -17,32 +17,32 @@ public static class AuthEndpoints
             .WithTags("Authentication")
             .WithOpenApi();
 
-        // POST /api/auth/register - Rejestracja operatora
+        // POST /api/auth/register - Register operator
         group.MapPost("/register", async (
             RegisterOperatorDto dto,
             AutoSOSDbContext db) =>
         {
-            // Walidacja
+            // Validation
             if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
             {
-                return Results.BadRequest(new { error = "Email i hasło są wymagane" });
+                return Results.BadRequest(new { error = "Email and password are required" });
             }
 
             if (dto.Password.Length < 6)
             {
-                return Results.BadRequest(new { error = "Hasło musi mieć minimum 6 znaków" });
+                return Results.BadRequest(new { error = "Password must be at least 6 characters" });
             }
 
-            // Sprawdź czy email jest zajęty
+            // Check if email is already taken
             if (await db.Users.AnyAsync(u => u.Email == dto.Email))
             {
-                return Results.BadRequest(new { error = "Email już istnieje" });
+                return Results.BadRequest(new { error = "Email already exists" });
             }
 
-            // Hashuj hasło
+            // Hash password
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
 
-            // Utwórz użytkownika
+            // Create user
             var user = new User
             {
                 Id = Guid.NewGuid(),
@@ -51,10 +51,10 @@ public static class AuthEndpoints
                 PasswordHash = passwordHash,
                 Role = UserRole.Operator,
                 CreatedAt = DateTime.UtcNow,
-                IsVerified = true // Operators są automatycznie zweryfikowani
+                IsVerified = true // Operators are automatically verified
             };
 
-            // Utwórz operatora
+            // Create operator
             var operatorEntity = new Operator
             {
                 Id = Guid.NewGuid(),
@@ -63,7 +63,7 @@ public static class AuthEndpoints
                 Phone = dto.Phone,
                 VehicleType = dto.VehicleType,
                 ServiceRadiusKm = dto.ServiceRadiusKm ?? 20,
-                IsAvailable = false, // Domyślnie niedostępny
+                IsAvailable = false, // Unavailable by default
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -74,26 +74,26 @@ public static class AuthEndpoints
             return Results.Ok(new
             {
                 success = true,
-                message = "Konto operatora utworzone",
+                message = "Operator account created",
                 operatorId = operatorEntity.Id
             });
         })
         .WithName("RegisterOperator")
         .WithOpenApi();
 
-        // POST /api/auth/login - Logowanie operatora
+        // POST /api/auth/login - Login operator
         group.MapPost("/login", async (
             LoginDto dto,
             AutoSOSDbContext db,
             IConfiguration config) =>
         {
-            // Walidacja
+            // Validation
             if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
             {
-                return Results.BadRequest(new { error = "Email i hasło są wymagane" });
+                return Results.BadRequest(new { error = "Email and password are required" });
             }
 
-            // Znajdź użytkownika
+            // Find user
             var user = await db.Users
                 .Include(u => u.Operator)
                 .FirstOrDefaultAsync(u => u.Email == dto.Email && u.Role == UserRole.Operator);
@@ -103,19 +103,19 @@ public static class AuthEndpoints
                 return Results.Unauthorized();
             }
 
-            // Sprawdź hasło
+            // Verify password
             if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
             {
                 return Results.Unauthorized();
             }
 
-            // Sprawdź czy operator istnieje
+            // Check if operator exists
             if (user.Operator == null)
             {
-                return Results.BadRequest(new { error = "Konto operatora nie istnieje" });
+                return Results.BadRequest(new { error = "Operator account does not exist" });
             }
 
-            // Generuj JWT token
+            // Generate JWT token
             var token = GenerateJwtToken(user, user.Operator, config);
 
             return Results.Ok(new AuthResponseDto(
@@ -128,7 +128,7 @@ public static class AuthEndpoints
         .WithName("LoginOperator")
         .WithOpenApi();
 
-        // GET /api/auth/me - Sprawdź aktualnego użytkownika
+        // GET /api/auth/me - Get current user
         group.MapGet("/me", async (
             HttpContext context,
             AutoSOSDbContext db) =>
@@ -168,7 +168,7 @@ public static class AuthEndpoints
         var jwtKey = config["Jwt:Key"];
         if (string.IsNullOrEmpty(jwtKey))
         {
-            throw new InvalidOperationException("Jwt:Key nie jest skonfigurowany");
+            throw new InvalidOperationException("Jwt:Key is not configured");
         }
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
