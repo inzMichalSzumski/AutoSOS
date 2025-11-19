@@ -1,4 +1,4 @@
-import { HelpRequest, Operator, RequestStatusType } from '../App'
+import type { HelpRequest, Operator, RequestStatusType } from '../types'
 
 interface RequestStatusProps {
   request: HelpRequest

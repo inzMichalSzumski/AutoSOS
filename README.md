@@ -1,44 +1,62 @@
 # AutoSOS 🚗
 
-Aplikacja PWA do wezwania pomocy drogowej. Łączy osoby potrzebujące pomocy z operatorami świadczącymi usługi pomocy drogowej (lawety, mechanicy).
+A PWA application for roadside assistance. Connects people in need with operators providing roadside assistance services (tow trucks, mechanics).
 
-## 🚀 Funkcjonalności
+## 🚀 Features
 
-- **Formularz wezwania pomocy** - prosty interfejs do zgłoszenia potrzeby pomocy
-- **Wybór lokalizacji** - wskazanie punktu A (start) i opcjonalnie punktu B (cel) na mapie
-- **Lista dostępnych operatorów** - przeglądanie dostępnej pomocy w okolicy z cenami i czasem dojazdu
-- **PWA** - aplikacja działa offline i może być zainstalowana na urządzeniu
-- **Optymalizacja dla słabych sieci** - caching map i danych dla lepszej wydajności
+- **Help request form** - simple interface to submit assistance request
+- **Location selection** - mark point A (start) and optionally point B (destination) on map
+- **List of available operators** - browse available help nearby with prices and arrival time
+- **PWA** - app works offline and can be installed on device
+- **Optimization for weak networks** - caching maps and data for better performance
 
-## 🛠️ Technologie
+## 🛠️ Technologies
 
 ### Frontend
-- **React** + **TypeScript** - framework i typowanie
+- **React** + **TypeScript** - framework and typing
 - **Vite** - build tool
 - **Tailwind CSS** - styling
-- **Leaflet** + **OpenStreetMap** - mapy (darmowe, bez limitu zapytań)
-- **PWA** - service worker i manifest dla instalacji aplikacji
+- **Leaflet** + **OpenStreetMap** - maps (free, no query limits)
+- **PWA** - service worker and manifest for app installation
+- **React Router** - routing for multiple views
 
-### Backend (w planach)
-- **.NET 8** - backend API
-- **PostgreSQL** + **Entity Framework Core** - baza danych
-- **SignalR** - real-time komunikacja
-- **Azure App Service** - hosting
+### Backend
+- **.NET 10** - backend API
+- **SQL Server** + **Entity Framework Core** - database
+- **SignalR** - real-time communication
+- **JWT Authentication** - secure operator authentication
+- **BCrypt** - password hashing
 
-## 📁 Struktura projektu
+## 📁 Project Structure
 
 ```
 AutoSOS/
-├── frontend/          # React PWA aplikacja
+├── frontend/                    # React PWA application
 │   ├── src/
-│   │   ├── components/
-│   │   ├── App.tsx
-│   │   └── main.tsx
+│   │   ├── components/         # UI components
+│   │   ├── pages/              # Page components (user/operator)
+│   │   ├── services/           # API and auth services
+│   │   ├── hooks/              # Custom React hooks
+│   │   └── types/              # TypeScript types
 │   └── package.json
-└── backend/           # .NET API (w planach)
+└── backend/                     # .NET API
+    └── AutoSOS.Api/
+        ├── Endpoints/          # API endpoints
+        ├── Models/             # Database models
+        ├── Data/               # DbContext and migrations
+        └── Services/           # Business logic
 ```
 
-## 🚀 Uruchomienie lokalne
+## 🚀 Local Development
+
+### Backend
+
+```bash
+cd backend/AutoSOS.Api
+dotnet run
+```
+
+Backend will be available at `http://localhost:5000`
 
 ### Frontend
 
@@ -48,46 +66,74 @@ npm install
 npm run dev
 ```
 
-Aplikacja będzie dostępna pod adresem `http://localhost:5173`
+Application will be available at `http://localhost:5173`
 
-### Build produkcyjny
+### Production Build
 
 ```bash
 cd frontend
 npm run build
 ```
 
-Pliki gotowe do wdrożenia znajdą się w `frontend/dist`
+Production-ready files will be in `frontend/dist`
 
 ## 🌐 Deployment
 
 ### GitHub Pages
 
-Projekt jest automatycznie wdrażany na GitHub Pages po każdym pushu do brancha `main`.
+Project is automatically deployed to GitHub Pages after each push to `main` branch.
 
-Aby włączyć GitHub Pages:
-1. Przejdź do Settings → Pages w repozytorium
-2. Wybierz "GitHub Actions" jako source
-3. Workflow automatycznie wdroży aplikację po buildzie
+To enable GitHub Pages:
+1. Go to Settings → Pages in repository
+2. Select "GitHub Actions" as source
+3. Workflow will automatically deploy the application after build
 
-Aplikacja będzie dostępna pod adresem:
-`https://[twoja-nazwa-użytkownika].github.io/AutoSOS/`
+Application will be available at:
+`https://[your-username].github.io/AutoSOS/`
 
-## 📝 TODO
+## 📝 Current Status
 
-- [ ] Backend .NET z API
-- [ ] Integracja SignalR dla real-time updates
-- [ ] Baza danych PostgreSQL
-- [ ] Panel operatora (aplikacja do zarządzania zgłoszeniami)
-- [ ] System autentykacji
-- [ ] Powiadomienia push
-- [ ] Kalkulacja ceny na podstawie trasy A→B
-- [ ] Historia zgłoszeń
+### ✅ Completed (v0.1 - MVP)
+- [x] Backend .NET API
+- [x] SignalR integration for real-time updates
+- [x] SQL Server database
+- [x] Operator panel (authentication and basic dashboard)
+- [x] JWT authentication system
+- [x] Push notifications infrastructure
+- [x] Request and offer management
 
-## 🤝 Współpraca
+### 🚧 In Progress
+- [ ] Operator dashboard - incoming requests list
+- [ ] Real-time notifications (SignalR integration)
+- [ ] Price calculation based on A→B route
+- [ ] Request history
 
-Projekt jest w fazie rozwoju. Wszelkie sugestie i pull requesty są mile widziane!
+### 📋 Planned Features
+- [ ] Payment integration (Stripe/PayU)
+- [ ] SMS notifications
+- [ ] Admin panel
+- [ ] Mobile app (React Native)
+- [ ] Rating system
+- [ ] Chat between user and operator
 
-## 📄 Licencja
+## 🔐 Security Features
+
+- JWT token-based authentication
+- BCrypt password hashing
+- Protected API endpoints
+- CORS configuration
+- Input validation
+
+## 📚 Documentation
+
+- [ROADMAP.md](ROADMAP.md) - Development roadmap
+- [SECURITY_TASKS.md](docs/SECURITY_TASKS.md) - Security improvements backlog
+- [GITHUB_PROJECT_MANAGEMENT.md](docs/GITHUB_PROJECT_MANAGEMENT.md) - Project management guide
+
+## 🤝 Contributing
+
+Project is under active development. All suggestions and pull requests are welcome!
+
+## 📄 License
 
 MIT
