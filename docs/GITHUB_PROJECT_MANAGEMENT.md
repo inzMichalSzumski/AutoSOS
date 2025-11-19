@@ -1,103 +1,103 @@
-# 📋 Zarządzanie projektem w GitHub
+# 📋 GitHub Project Management
 
-Przewodnik jak używać GitHub Issues i Projects do zarządzania projektem AutoSOS.
+Guide on how to use GitHub Issues and Projects to manage the AutoSOS project.
 
 ---
 
-## 🎯 GitHub Issues - Podstawy
+## 🎯 GitHub Issues - Basics
 
-### Czym są Issues?
-GitHub Issues to zadania, bugi, feature requesty - podobne do Work Items w Azure DevOps.
+### What Are Issues?
+GitHub Issues are tasks, bugs, feature requests - similar to Work Items in Azure DevOps.
 
-### Jak utworzyć Issue?
+### How to Create an Issue?
 
-#### Metoda 1: Przez interfejs GitHub
-1. Wejdź na https://github.com/TWOJ_USERNAME/AutoSOS
-2. Kliknij zakładkę **Issues**
-3. Kliknij **New Issue**
-4. Wybierz template (Feature Request, Bug Report, Security Enhancement)
-5. Wypełnij formularz
-6. Dodaj Labels (np. `enhancement`, `security`, `high-priority`)
-7. Opcjonalnie: Assignees (kto pracuje), Milestone, Project
-8. Kliknij **Submit new issue**
+#### Method 1: Through GitHub Interface
+1. Go to https://github.com/YOUR_USERNAME/AutoSOS
+2. Click the **Issues** tab
+3. Click **New Issue**
+4. Select template (Feature Request, Bug Report, Security Enhancement)
+5. Fill out the form
+6. Add Labels (e.g., `enhancement`, `security`, `high-priority`)
+7. Optionally: Assignees (who's working), Milestone, Project
+8. Click **Submit new issue**
 
-#### Metoda 2: Przez GitHub CLI
+#### Method 2: Through GitHub CLI
 ```bash
-# Zainstaluj GitHub CLI (jeśli nie masz)
+# Install GitHub CLI (if you don't have it)
 # Windows: winget install GitHub.cli
 # Mac: brew install gh
 
-# Zaloguj się
+# Login
 gh auth login
 
-# Utwórz issue
-gh issue create --title "[SECURITY] Dodać rate limiting" --body "Opis zadania" --label security,enhancement
+# Create issue
+gh issue create --title "[SECURITY] Add rate limiting" --body "Task description" --label security,enhancement
 
-# Lista issues
+# List issues
 gh issue list
 
-# Zamknij issue
+# Close issue
 gh issue close 123
 ```
 
 ---
 
-## 🏷️ Labels (Etykiety)
+## 🏷️ Labels
 
-Zalecane labels dla AutoSOS:
+Recommended labels for AutoSOS:
 
-### Typ
-- `bug` 🐛 - Błąd do naprawienia
-- `enhancement` ✨ - Nowa funkcjonalność
-- `security` 🔐 - Bezpieczeństwo
-- `documentation` 📚 - Dokumentacja
-- `refactoring` ♻️ - Refaktoryzacja kodu
+### Type
+- `bug` 🐛 - Bug to fix
+- `enhancement` ✨ - New functionality
+- `security` 🔐 - Security
+- `documentation` 📚 - Documentation
+- `refactoring` ♻️ - Code refactoring
 
-### Priorytet
-- `priority: critical` 🚨 - Krytyczne, natychmiast
-- `priority: high` ⬆️ - Wysokie, w tym sprincie
-- `priority: medium` ➡️ - Średnie, w backlogu
-- `priority: low` ⬇️ - Niskie, nice to have
+### Priority
+- `priority: critical` 🚨 - Critical, immediately
+- `priority: high` ⬆️ - High, in this sprint
+- `priority: medium` ➡️ - Medium, in backlog
+- `priority: low` ⬇️ - Low, nice to have
 
 ### Status
-- `status: blocked` 🚫 - Zablokowane przez coś innego
-- `status: in progress` 🔄 - W trakcie pracy
-- `status: needs review` 👀 - Czeka na review
-- `status: ready` ✅ - Gotowe do wzięcia
+- `status: blocked` 🚫 - Blocked by something else
+- `status: in progress` 🔄 - Work in progress
+- `status: needs review` 👀 - Waiting for review
+- `status: ready` ✅ - Ready to be taken
 
-### Komponenty
+### Components
 - `backend` - Backend (.NET)
 - `frontend` - Frontend (React)
-- `database` - Baza danych
+- `database` - Database
 - `devops` - CI/CD, deployment
-- `mobile` - Aplikacja mobilna
+- `mobile` - Mobile application
 
-### Inne
-- `good first issue` 👶 - Dobre dla początkujących
-- `help wanted` 🆘 - Potrzebna pomoc
-- `wontfix` - Nie będziemy tego robić
-- `duplicate` - Duplikat innego issue
+### Other
+- `good first issue` 👶 - Good for beginners
+- `help wanted` 🆘 - Help needed
+- `wontfix` - We won't fix this
+- `duplicate` - Duplicate of another issue
 
 ---
 
-## 🎯 Milestones (Kamienie milowe)
+## 🎯 Milestones
 
-Milestones = Sprints lub wersje
+Milestones = Sprints or versions
 
-### Przykłady:
-- **v0.2 - Panel Operatora** (cel: 2025-12-01)
-- **v0.3 - Real-time** (cel: 2025-12-31)
-- **v1.0 - Produkcja** (cel: 2026-03-01)
+### Examples:
+- **v0.2 - Operator Panel** (target: 2025-12-01)
+- **v0.3 - Real-time** (target: 2025-12-31)
+- **v1.0 - Production** (target: 2026-03-01)
 
-### Jak utworzyć Milestone:
+### How to Create a Milestone:
 1. Issues → Milestones → New Milestone
-2. Tytuł: `v0.2 - Panel Operatora`
+2. Title: `v0.2 - Operator Panel`
 3. Due date: `2025-12-01`
-4. Description: Lista głównych features
+4. Description: List of main features
 5. Create milestone
 
-### Przypisanie Issue do Milestone:
-- W issue → Milestone → wybierz z listy
+### Assign Issue to Milestone:
+- In issue → Milestone → select from list
 
 ---
 
@@ -105,17 +105,17 @@ Milestones = Sprints lub wersje
 
 GitHub Projects = Azure DevOps Boards
 
-### Jak utworzyć Project:
+### How to Create a Project:
 
-1. Zakładka **Projects** w repo
-2. **New Project** → wybierz template:
+1. **Projects** tab in repo
+2. **New Project** → select template:
    - **Board** - Kanban (To Do, In Progress, Done)
-   - **Table** - Widok tabelaryczny
-   - **Roadmap** - Timeline z datami
-3. Nazwij: `AutoSOS - Sprint 1`
-4. Dodaj issues przeciągając lub klikając `+`
+   - **Table** - Table view
+   - **Roadmap** - Timeline with dates
+3. Name it: `AutoSOS - Sprint 1`
+4. Add issues by dragging or clicking `+`
 
-### Przykładowy Board Kanban:
+### Example Kanban Board:
 
 ```
 📋 Backlog    |  🔄 In Progress  |  👀 Review  |  ✅ Done
@@ -125,88 +125,88 @@ Issue #16     |  Issue #11       |             |  Issue #6
 Issue #17     |                  |             |  Issue #7
 ```
 
-### Automatyzacja:
-- Gdy PR jest merged → automatycznie przesuń issue do "Done"
-- Gdy issue jest assigned → przesuń do "In Progress"
+### Automation:
+- When PR is merged → automatically move issue to "Done"
+- When issue is assigned → move to "In Progress"
 
 ---
 
-## 🔍 Wyszukiwanie i Filtrowanie
+## 🔍 Search and Filtering
 
-### Przykłady zapytań:
+### Example queries:
 
 ```bash
-# Wszystkie otwarte security issues
+# All open security issues
 is:issue is:open label:security
 
-# Bugi wysokiego priorytetu
+# High priority bugs
 is:issue is:open label:bug label:"priority: high"
 
-# Issues przypisane do mnie
+# Issues assigned to me
 is:issue is:open assignee:@me
 
-# Issues w milestone v0.2
-is:issue milestone:"v0.2 - Panel Operatora"
+# Issues in milestone v0.2
+is:issue milestone:"v0.2 - Operator Panel"
 
-# Issues bez assignee (wolne do wzięcia)
+# Issues without assignee (free to take)
 is:issue is:open no:assignee label:"good first issue"
 ```
 
 ---
 
-## 📝 Templates Issues (już utworzone)
+## 📝 Issue Templates (Already Created)
 
-W `.github/ISSUE_TEMPLATE/` masz:
+In `.github/ISSUE_TEMPLATE/` you have:
 
-1. **feature_request.md** - Nowa funkcjonalność
-2. **bug_report.md** - Zgłoszenie błędu
-3. **security_enhancement.md** - Bezpieczeństwo
+1. **feature_request.md** - New functionality
+2. **bug_report.md** - Bug report
+3. **security_enhancement.md** - Security
 
-### Jak używać:
-Gdy tworzysz nowy issue, GitHub pokaże te templates do wyboru.
+### How to Use:
+When you create a new issue, GitHub will show these templates to choose from.
 
 ---
 
-## 🚀 Workflow z Issues
+## 🚀 Workflow with Issues
 
-### Przykładowy przepływ pracy:
+### Example workflow:
 
-1. **Planowanie:**
-   - Utwórz issues dla wszystkich zadań
-   - Dodaj labels i milestones
-   - Priorytetyzuj (drag & drop w Project)
+1. **Planning:**
+   - Create issues for all tasks
+   - Add labels and milestones
+   - Prioritize (drag & drop in Project)
 
 2. **Sprint:**
-   - Wybierz issues do sprintu
-   - Assign do siebie
-   - Przenieś do "In Progress" w Project
+   - Select issues for sprint
+   - Assign to yourself
+   - Move to "In Progress" in Project
 
-3. **Praca:**
+3. **Work:**
    ```bash
-   # Utwórz branch dla issue #25
+   # Create branch for issue #25
    git checkout -b feature/25-rate-limiting
    
-   # Pracuj...
+   # Work...
    git commit -m "feat: Add rate limiting #25"
    
-   # Push i utwórz PR
+   # Push and create PR
    git push origin feature/25-rate-limiting
    gh pr create --title "Add rate limiting" --body "Closes #25"
    ```
 
 4. **Code Review:**
-   - PR jest reviewed
-   - Issue automatycznie w "Review"
+   - PR is reviewed
+   - Issue automatically in "Review"
 
 5. **Merge:**
-   - PR jest merged → issue zamknięty automatycznie (dzięki "Closes #25")
-   - Issue w "Done"
+   - PR is merged → issue closed automatically (thanks to "Closes #25")
+   - Issue in "Done"
 
 ---
 
-## 🔗 Linkowanie Issues z Commitami/PRami
+## 🔗 Linking Issues with Commits/PRs
 
-### W commit message:
+### In commit message:
 ```bash
 git commit -m "feat: Add JWT authentication
 
@@ -214,14 +214,14 @@ Closes #10
 Related to #11, #12"
 ```
 
-### W PR description:
+### In PR description:
 ```markdown
 Closes #10
 Fixes #15
 Related to #20
 ```
 
-**Słowa kluczowe** (automatycznie zamkną issue po merge):
+**Keywords** (will automatically close issue after merge):
 - `Closes #123`
 - `Fixes #123`
 - `Resolves #123`
@@ -230,15 +230,15 @@ Related to #20
 
 ## 📱 GitHub Mobile App
 
-Zarządzaj issues na telefonie:
+Manage issues on phone:
 - iOS: https://apps.apple.com/app/github/id1477376905
 - Android: https://play.google.com/store/apps/details?id=com.github.android
 
 ---
 
-## 🤖 Automatyzacja z GitHub Actions
+## 🤖 Automation with GitHub Actions
 
-Możesz automatyzować zarządzanie issues:
+You can automate issue management:
 
 ```yaml
 # .github/workflows/issue-management.yml
@@ -259,28 +259,28 @@ jobs:
 
 ---
 
-## 📊 Raportowanie
+## 📊 Reporting
 
-### Przydatne widoki:
+### Useful views:
 
-1. **Burndown Chart** - w Projects → Insights
-2. **Velocity** - ile issues zamykacie w sprincie
-3. **Label distribution** - ile issues każdego typu
-
----
-
-## 💡 Porady
-
-1. **Jeden issue = jedno zadanie** - nie rób mega-issues
-2. **Dobre tytuły** - `[SECURITY] Add rate limiting` zamiast "security"
-3. **Opisy z kontekstem** - dlaczego, nie tylko co
-4. **Aktualizuj statusy** - przesuwaj w Board na bieżąco
-5. **Zamykaj stare issues** - jeśli nieaktualne, zamknij z komentarzem
-6. **Reference w commitach** - zawsze `#123` w commit message
+1. **Burndown Chart** - in Projects → Insights
+2. **Velocity** - how many issues you close per sprint
+3. **Label distribution** - how many issues of each type
 
 ---
 
-## 📚 Więcej informacji
+## 💡 Tips
+
+1. **One issue = one task** - don't create mega-issues
+2. **Good titles** - `[SECURITY] Add rate limiting` instead of "security"
+3. **Descriptions with context** - why, not just what
+4. **Update statuses** - move in Board regularly
+5. **Close old issues** - if outdated, close with comment
+6. **Reference in commits** - always `#123` in commit message
+
+---
+
+## 📚 More Information
 
 - [GitHub Issues Docs](https://docs.github.com/en/issues)
 - [GitHub Projects Docs](https://docs.github.com/en/issues/planning-and-tracking-with-projects)
@@ -289,4 +289,3 @@ jobs:
 ---
 
 **Happy project managing!** 🚀
-

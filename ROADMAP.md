@@ -1,112 +1,112 @@
-# 🗺️ AutoSOS - Plan Rozwoju
+# 🗺️ AutoSOS - Development Roadmap
 
-## 🎯 Wizja projektu
-Aplikacja PWA łącząca osoby potrzebujące pomocy drogowej z operatorami w czasie rzeczywistym.
+## 🎯 Project Vision
+A PWA application connecting people in need of roadside assistance with operators in real-time.
 
 ---
 
-## ✅ Zrobione (v0.1 - MVP)
+## ✅ Completed (v0.1 - MVP)
 
 ### Backend
-- [x] .NET 8 API z Minimal API
+- [x] .NET 10 API with Minimal API
 - [x] Entity Framework Core + SQL Server
-- [x] Modele: User, Operator, Request, Offer
-- [x] Endpointy CRUD dla zgłoszeń i ofert
-- [x] SignalR Hub dla komunikacji real-time
-- [x] Autentykacja JWT dla operatorów
-- [x] BCrypt hashowanie haseł
-- [x] Geolokalizacja - wyszukiwanie operatorów w promieniu
+- [x] Models: User, Operator, Request, Offer
+- [x] CRUD endpoints for requests and offers
+- [x] SignalR Hub for real-time communication
+- [x] JWT authentication for operators
+- [x] BCrypt password hashing
+- [x] Geolocation - search for operators within radius
 
 ### Frontend
 - [x] React + TypeScript + Vite
 - [x] Tailwind CSS
-- [x] PWA z Service Worker
-- [x] Leaflet mapy (OpenStreetMap)
-- [x] Formularz zgłoszenia pomocy
-- [x] Lista dostępnych operatorów
-- [x] Akceptacja oferty
-- [x] React Router dla wielu widoków
-- [x] Panel logowania/rejestracji operatora
-- [x] Protected routes z JWT
+- [x] PWA with Service Worker
+- [x] Leaflet maps (OpenStreetMap)
+- [x] Help request form
+- [x] List of available operators
+- [x] Offer acceptance
+- [x] React Router for multiple views
+- [x] Operator login/registration panel
+- [x] Protected routes with JWT
 
 ---
 
-## 🚧 W trakcie (v0.2)
+## 🚧 In Progress (v0.2)
 
-- [ ] Panel operatora - lista przychodzących zgłoszeń
-- [ ] Panel operatora - wysyłanie ofert
-- [ ] Real-time powiadomienia (SignalR)
-- [ ] Aktualizacja lokalizacji operatora (GPS tracking)
-- [ ] Historia zgłoszeń dla operatora
+- [ ] Operator panel - list of incoming requests
+- [ ] Operator panel - sending offers
+- [ ] Real-time notifications (SignalR)
+- [ ] Operator location update (GPS tracking)
+- [ ] Request history for operator
 
 ---
 
-## 📋 Backlog - Funkcjonalności
+## 📋 Backlog - Features
 
-### v0.3 - Panel Operatora (kompletny)
-- [ ] Dashboard z statystykami
-- [ ] Filtrowanie zgłoszeń (po statusie, odległości)
-- [ ] Mapa ze zgłoszeniami w czasie rzeczywistym
-- [ ] Nawigacja do lokalizacji klienta (Google Maps/Waze)
-- [ ] Chat z klientem
-- [ ] Historia zleceń z przychodami
+### v0.3 - Operator Panel (Complete)
+- [ ] Dashboard with statistics
+- [ ] Request filtering (by status, distance)
+- [ ] Map with real-time requests
+- [ ] Navigation to customer location (Google Maps/Waze)
+- [ ] Chat with customer
+- [ ] Job history with earnings
 
-### v0.4 - Użytkownik (ulepszone UX)
-- [ ] Śledzenie lokalizacji operatora w czasie rzeczywistym
-- [ ] ETA (szacowany czas przyjazdu)
-- [ ] Ocena operatora po zleceniu (gwiazdki + komentarz)
-- [ ] Historia pomocy użytkownika
-- [ ] Zapisane lokalizacje (dom, praca)
+### v0.4 - User Experience Improvements
+- [ ] Real-time operator location tracking
+- [ ] ETA (estimated time of arrival)
+- [ ] Operator rating after job (stars + comment)
+- [ ] User's assistance history
+- [ ] Saved locations (home, work)
 
-### v0.5 - Płatności
-- [ ] Integracja z Stripe/PayU
-- [ ] Płatność kartą po zakończeniu zlecenia
-- [ ] Faktury automatyczne
-- [ ] System prowizji (% dla platformy)
+### v0.5 - Payments
+- [ ] Stripe/PayU integration
+- [ ] Card payment after job completion
+- [ ] Automatic invoices
+- [ ] Commission system (% for platform)
 
-### v0.6 - Powiadomienia
+### v0.6 - Notifications
 - [ ] Push notifications (Web Push API)
 - [ ] SMS (Twilio/Vonage)
 - [ ] Email notifications
 
-### v0.7 - Administracja
-- [ ] Panel admina
-- [ ] Weryfikacja operatorów (dokumenty, ubezpieczenie)
-- [ ] Moderacja opinii
-- [ ] Statystyki platformy
-- [ ] Zarządzanie użytkownikami
+### v0.7 - Administration
+- [ ] Admin panel
+- [ ] Operator verification (documents, insurance)
+- [ ] Review moderation
+- [ ] Platform statistics
+- [ ] User management
 
-### v0.8 - Rozszerzenia biznesowe
-- [ ] System subskrypcji dla operatorów (Premium)
-- [ ] Promowane ogłoszenia operatorów
-- [ ] Program lojalnościowy dla użytkowników
-- [ ] Integracja z ubezpieczeniami (OC/AC)
+### v0.8 - Business Extensions
+- [ ] Subscription system for operators (Premium)
+- [ ] Promoted operator listings
+- [ ] Loyalty program for users
+- [ ] Insurance integration (liability/comprehensive)
 
 ---
 
-## 🔐 Bezpieczeństwo (Backlog Security)
+## 🔐 Security (Backlog)
 
-### Priorytet: Wysoki
-- [ ] Rate limiting (5 prób logowania/minutę)
-- [ ] CAPTCHA po 3 nieudanych próbach logowania
-- [ ] Walidacja po stronie backendu (wszystkie endpointy)
-- [ ] CORS - konfiguracja dla produkcji
-- [ ] Helmet.js dla security headers
+### Priority: High
+- [ ] Rate limiting (5 login attempts/minute)
+- [ ] CAPTCHA after 3 failed login attempts
+- [ ] Backend validation (all endpoints)
+- [ ] CORS - production configuration
+- [ ] Security headers (Helmet.js equivalent)
 - [ ] Content Security Policy (CSP)
 
-### Priorytet: Średni
-- [ ] 2FA (SMS lub Email)
-- [ ] Password strength meter na frontendzie
-- [ ] Wymuszanie zmiany hasła co 90 dni
-- [ ] Sesje - logout na wszystkich urządzeniach
-- [ ] Logowanie podejrzanych aktywności (failed logins, brute force)
-- [ ] HTTPS wymuszony na produkcji
-- [ ] Szyfrowanie wrażliwych danych w bazie (GDPR)
+### Priority: Medium
+- [ ] 2FA (SMS or Email)
+- [ ] Password strength meter on frontend
+- [ ] Enforce password change every 90 days
+- [ ] Sessions - logout on all devices
+- [ ] Logging suspicious activities (failed logins, brute force)
+- [ ] HTTPS enforced in production
+- [ ] Encryption of sensitive data in database (GDPR)
 
-### Priorytet: Niski
+### Priority: Low
 - [ ] OAuth2 (Google, Facebook, Apple)
 - [ ] WebAuthn / Passkeys
-- [ ] Audyt bezpieczeństwa (penetration testing)
+- [ ] Security audit (penetration testing)
 - [ ] Bug bounty program
 
 ---
@@ -114,27 +114,27 @@ Aplikacja PWA łącząca osoby potrzebujące pomocy drogowej z operatorami w cza
 ## 🎨 UX/UI Improvements
 
 - [ ] Dark mode
-- [ ] Responsywność dla tabletów
-- [ ] Animacje (Framer Motion)
+- [ ] Tablet responsiveness
+- [ ] Animations (Framer Motion)
 - [ ] Skeleton loaders
-- [ ] Optymalizacja dla slow 3G
-- [ ] Wsparcie dla języków (i18n: PL, EN, DE)
+- [ ] Optimization for slow 3G
+- [ ] Multi-language support (i18n: PL, EN, DE)
 - [ ] Accessibility (WCAG 2.1 AA)
 
 ---
 
 ## ⚡ Performance
 
-- [ ] React Query dla cache'owania danych
-- [ ] Lazy loading komponentów
+- [ ] React Query for data caching
+- [ ] Lazy loading components
 - [ ] Image optimization (WebP, loading="lazy")
 - [ ] Code splitting (route-based)
-- [ ] CDN dla statycznych assetów
-- [ ] Monitoring (Sentry dla błędów)
+- [ ] CDN for static assets
+- [ ] Monitoring (Sentry for errors)
 
 ---
 
-## 🧪 Testy
+## 🧪 Testing
 
 - [ ] Backend - Unit tests (xUnit)
 - [ ] Backend - Integration tests
@@ -147,36 +147,36 @@ Aplikacja PWA łącząca osoby potrzebujące pomocy drogowej z operatorami w cza
 ## 📱 Mobile
 
 - [ ] React Native app (iOS + Android)
-- [ ] lub Capacitor/Ionic
-- [ ] Natywne push notifications
-- [ ] GPS tracking w tle
+- [ ] or Capacitor/Ionic
+- [ ] Native push notifications
+- [ ] Background GPS tracking
 
 ---
 
 ## 🚀 Deployment & DevOps
 
-- [ ] Dockerizacja (Backend + Frontend)
+- [ ] Dockerization (Backend + Frontend)
 - [ ] Kubernetes/Azure Container Apps
 - [ ] CI/CD pipeline
 - [ ] Staging environment
 - [ ] Monitoring (Application Insights)
 - [ ] Logging (Seq/Elasticsearch)
-- [ ] Backup strategy bazy danych
+- [ ] Database backup strategy
 
 ---
 
 ## 📊 Analytics
 
 - [ ] Google Analytics
-- [ ] Hotjar (heatmapy)
-- [ ] Metryki biznesowe (konwersja, CAC, LTV)
+- [ ] Hotjar (heatmaps)
+- [ ] Business metrics (conversion, CAC, LTV)
 
 ---
 
-## 📖 Dokumentacja
+## 📖 Documentation
 
 - [ ] API documentation (Swagger/OpenAPI)
-- [ ] Instrukcja dla operatorów
+- [ ] Operator instructions
 - [ ] FAQ
 - [ ] Terms of Service
 - [ ] Privacy Policy (GDPR)
@@ -185,25 +185,24 @@ Aplikacja PWA łącząca osoby potrzebujące pomocy drogowej z operatorami w cza
 
 ## 🌍 Compliance
 
-- [ ] GDPR - zgody użytkowników
-- [ ] RODO - polityka prywatności
-- [ ] Cookies - banner i zarządzanie
-- [ ] Regulamin platformy
-- [ ] Warunki użytkowania dla operatorów
+- [ ] GDPR - user consents
+- [ ] Privacy policy
+- [ ] Cookies - banner and management
+- [ ] Platform terms
+- [ ] Terms of use for operators
 
 ---
 
-## 💡 Pomysły na przyszłość
+## 💡 Future Ideas
 
-- [ ] Integracja z warsztatami (umówienie naprawy od razu)
-- [ ] Marketplace części samochodowych
-- [ ] SOS Button - fizyczny przycisk Bluetooth
-- [ ] Integracja z systemami telematycznymi aut
-- [ ] AR - wizualizacja problemu przez kamerę telefonu
-- [ ] AI - diagnostyka problemu na podstawie zdjęcia/opisu
+- [ ] Integration with repair shops (schedule repair immediately)
+- [ ] Automotive parts marketplace
+- [ ] SOS Button - physical Bluetooth button
+- [ ] Integration with car telematics systems
+- [ ] AR - problem visualization through phone camera
+- [ ] AI - problem diagnosis based on photo/description
 
 ---
 
-**Ostatnia aktualizacja:** 2025-11-17
-**Wersja:** 0.1 (MVP)
-
+**Last updated:** 2025-11-19
+**Version:** 0.1 (MVP)

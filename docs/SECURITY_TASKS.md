@@ -1,73 +1,73 @@
-# 🔐 Zadania Bezpieczeństwa - Gotowe do utworzenia jako Issues
+# 🔐 Security Tasks - Ready to Create as Issues
 
-Skopiuj poniższe zadania i utwórz jako GitHub Issues.
+Copy the tasks below and create them as GitHub Issues.
 
 ---
 
-## Issue #1: Rate Limiting dla endpointów autentykacji
+## Issue #1: Rate Limiting for Authentication Endpoints
 
-**Title:** `[SECURITY] Implementować rate limiting dla logowania i rejestracji`
+**Title:** `[SECURITY] Implement rate limiting for login and registration`
 
 **Labels:** `security`, `enhancement`, `priority: high`, `backend`
 
 **Description:**
 ```markdown
-## 🔐 Opis
-Dodać rate limiting, aby zapobiec atakom brute-force na endpointy:
+## 🔐 Description
+Add rate limiting to prevent brute-force attacks on endpoints:
 - POST /api/auth/login
 - POST /api/auth/register
 
-## ⚠️ Priorytet
-- [x] Wysoki - należy zrobić w najbliższym czasie
+## ⚠️ Priority
+- [x] High - should be done soon
 
-## 💡 Proponowane rozwiązanie
-Użyć biblioteki `AspNetCoreRateLimit` lub custom middleware:
-- Max 5 prób logowania na IP w ciągu 1 minuty
-- Max 3 rejestracje na IP w ciągu 1 godziny
-- Po przekroczeniu: HTTP 429 Too Many Requests
+## 💡 Proposed Solution
+Use `AspNetCoreRateLimit` library or custom middleware:
+- Max 5 login attempts per IP in 1 minute
+- Max 3 registrations per IP in 1 hour
+- When exceeded: HTTP 429 Too Many Requests
 
-## ✅ Kryteria akceptacji
-- [ ] Rate limiting dla POST /api/auth/login (5/min)
-- [ ] Rate limiting dla POST /api/auth/register (3/h)
-- [ ] Zwracanie odpowiedniego komunikatu błędu
-- [ ] Testy jednostkowe
-- [ ] Dokumentacja w README
+## ✅ Acceptance Criteria
+- [ ] Rate limiting for POST /api/auth/login (5/min)
+- [ ] Rate limiting for POST /api/auth/register (3/h)
+- [ ] Return appropriate error message
+- [ ] Unit tests
+- [ ] Documentation in README
 
-## 📚 Dokumentacja
+## 📚 Documentation
 - https://github.com/stefanprodan/AspNetCoreRateLimit
 - https://learn.microsoft.com/en-us/aspnet/core/performance/rate-limit
 ```
 
 ---
 
-## Issue #2: CAPTCHA po nieudanych próbach logowania
+## Issue #2: CAPTCHA After Failed Login Attempts
 
-**Title:** `[SECURITY] Dodać CAPTCHA po 3 nieudanych próbach logowania`
+**Title:** `[SECURITY] Add CAPTCHA after 3 failed login attempts`
 
 **Labels:** `security`, `enhancement`, `priority: medium`, `frontend`, `backend`
 
 **Description:**
 ```markdown
-## 🔐 Opis
-Po 3 nieudanych próbach logowania wymagać rozwiązania CAPTCHA przed kolejną próbą.
+## 🔐 Description
+After 3 failed login attempts, require solving CAPTCHA before next attempt.
 
-## ⚠️ Priorytet
-- [x] Średni - planowane ulepszenie
+## ⚠️ Priority
+- [x] Medium - planned improvement
 
-## 💡 Proponowane rozwiązanie
-- Frontend: Google reCAPTCHA v3 (niewidoczne) lub hCaptcha
-- Backend: Weryfikacja tokenu CAPTCHA przed logowaniem
-- Tracking nieudanych prób po IP lub email
+## 💡 Proposed Solution
+- Frontend: Google reCAPTCHA v3 (invisible) or hCaptcha
+- Backend: Verify CAPTCHA token before login
+- Track failed attempts by IP or email
 
-## ✅ Kryteria akceptacji
-- [ ] Integracja reCAPTCHA v3 w formularz logowania
-- [ ] Backend weryfikuje token CAPTCHA
-- [ ] Licznik nieudanych prób (w pamięci lub Redis)
-- [ ] Reset licznika po udanym logowaniu
-- [ ] Testy E2E
-- [ ] Dokumentacja
+## ✅ Acceptance Criteria
+- [ ] Integrate reCAPTCHA v3 in login form
+- [ ] Backend verifies CAPTCHA token
+- [ ] Failed attempts counter (in memory or Redis)
+- [ ] Reset counter after successful login
+- [ ] E2E tests
+- [ ] Documentation
 
-## 📚 Dokumentacja
+## 📚 Documentation
 - https://www.google.com/recaptcha/about/
 - https://www.hcaptcha.com/
 ```
@@ -76,68 +76,68 @@ Po 3 nieudanych próbach logowania wymagać rozwiązania CAPTCHA przed kolejną 
 
 ## Issue #3: Password Strength Meter
 
-**Title:** `[SECURITY] Dodać password strength meter przy rejestracji`
+**Title:** `[SECURITY] Add password strength meter during registration`
 
 **Labels:** `security`, `enhancement`, `priority: medium`, `frontend`
 
 **Description:**
 ```markdown
-## 🔐 Opis
-Wizualna walidacja siły hasła podczas rejestracji operatora.
+## 🔐 Description
+Visual validation of password strength during operator registration.
 
-## ⚠️ Priorytet
-- [x] Średni - planowane ulepszenie
+## ⚠️ Priority
+- [x] Medium - planned improvement
 
-## 💡 Proponowane rozwiązanie
-Biblioteka: `zxcvbn` (używana przez Dropbox)
+## 💡 Proposed Solution
+Library: `zxcvbn` (used by Dropbox)
 
-Wymagania:
-- Minimum 8 znaków (zwiększone z 6)
-- Przynajmniej 1 wielka litera
-- Przynajmniej 1 cyfra
-- Przynajmniej 1 znak specjalny
+Requirements:
+- Minimum 8 characters (increased from 6)
+- At least 1 uppercase letter
+- At least 1 digit
+- At least 1 special character
 
-Wizualizacja:
-- Czerwony: Słabe
-- Żółty: Średnie
-- Zielony: Silne
+Visualization:
+- Red: Weak
+- Yellow: Medium
+- Green: Strong
 
-## ✅ Kryteria akceptacji
-- [ ] Komponent PasswordStrengthMeter
-- [ ] Real-time walidacja podczas wpisywania
-- [ ] Kolorowe wskaźniki (czerwony/żółty/zielony)
-- [ ] Podpowiedzi jak poprawić hasło
-- [ ] Backend również weryfikuje siłę hasła
-- [ ] Testy jednostkowe
-- [ ] Dokumentacja
+## ✅ Acceptance Criteria
+- [ ] PasswordStrengthMeter component
+- [ ] Real-time validation while typing
+- [ ] Color indicators (red/yellow/green)
+- [ ] Hints on how to improve password
+- [ ] Backend also verifies password strength
+- [ ] Unit tests
+- [ ] Documentation
 
-## 📚 Dokumentacja
+## 📚 Documentation
 - https://github.com/dropbox/zxcvbn
 ```
 
 ---
 
-## Issue #4: Walidacja danych wejściowych na backendzie
+## Issue #4: Backend Input Validation
 
-**Title:** `[SECURITY] Dodać kompleksową walidację wszystkich endpointów`
+**Title:** `[SECURITY] Add comprehensive validation for all endpoints`
 
 **Labels:** `security`, `bug`, `priority: high`, `backend`
 
 **Description:**
 ```markdown
-## 🔐 Opis
-Wszystkie endpointy powinny mieć walidację po stronie backendu, aby zapobiec:
+## 🔐 Description
+All endpoints should have backend validation to prevent:
 - SQL Injection
 - XSS
 - Invalid data
 
-## ⚠️ Priorytet
-- [x] Wysoki - należy zrobić w najbliższym czasie
+## ⚠️ Priority
+- [x] High - should be done soon
 
-## 💡 Proponowane rozwiązanie
-Użyć FluentValidation dla wszystkich DTOs:
+## 💡 Proposed Solution
+Use FluentValidation for all DTOs:
 
-Przykład:
+Example:
 ```csharp
 public class RegisterOperatorDtoValidator : AbstractValidator<RegisterOperatorDto>
 {
@@ -151,35 +151,35 @@ public class RegisterOperatorDtoValidator : AbstractValidator<RegisterOperatorDt
 }
 ```
 
-## ✅ Kryteria akceptacji
-- [ ] Zainstalować FluentValidation.AspNetCore
-- [ ] Validatory dla wszystkich DTOs (Auth, Request, Offer, Operator)
-- [ ] Zwracanie szczegółowych błędów walidacji (400 Bad Request)
-- [ ] Sanityzacja stringów (usuwanie HTML tags)
-- [ ] Testy jednostkowe dla validatorów
-- [ ] Dokumentacja
+## ✅ Acceptance Criteria
+- [ ] Install FluentValidation.AspNetCore
+- [ ] Validators for all DTOs (Auth, Request, Offer, Operator)
+- [ ] Return detailed validation errors (400 Bad Request)
+- [ ] String sanitization (remove HTML tags)
+- [ ] Unit tests for validators
+- [ ] Documentation
 
-## 📚 Dokumentacja
+## 📚 Documentation
 - https://docs.fluentvalidation.net/
 ```
 
 ---
 
-## Issue #5: CORS - konfiguracja dla produkcji
+## Issue #5: CORS Configuration for Production
 
-**Title:** `[SECURITY] Skonfigurować CORS dla środowiska produkcyjnego`
+**Title:** `[SECURITY] Configure CORS for production environment`
 
 **Labels:** `security`, `devops`, `priority: high`, `backend`
 
 **Description:**
 ```markdown
-## 🔐 Opis
-Obecna konfiguracja CORS jest zbyt permisywna. Należy ograniczyć origins do konkretnych domen.
+## 🔐 Description
+Current CORS configuration is too permissive. Should limit origins to specific domains.
 
-## ⚠️ Priorytet
-- [x] Wysoki - krytyczne przed wdrożeniem na produkcję
+## ⚠️ Priority
+- [x] High - critical before production deployment
 
-## 💡 Proponowane rozwiązanie
+## 💡 Proposed Solution
 ```csharp
 builder.Services.AddCors(options =>
 {
@@ -207,39 +207,39 @@ appsettings.Production.json:
 }
 ```
 
-## ✅ Kryteria akceptacji
-- [ ] CORS origins z appsettings (nie hardcoded)
-- [ ] Różne origins dla Development/Production
-- [ ] Brak `AllowAnyOrigin()` na produkcji
-- [ ] Testy weryfikujące CORS policy
-- [ ] Dokumentacja deployment
+## ✅ Acceptance Criteria
+- [ ] CORS origins from appsettings (not hardcoded)
+- [ ] Different origins for Development/Production
+- [ ] No `AllowAnyOrigin()` in production
+- [ ] Tests verifying CORS policy
+- [ ] Deployment documentation
 
-## 📚 Dokumentacja
+## 📚 Documentation
 - https://learn.microsoft.com/en-us/aspnet/core/security/cors
 ```
 
 ---
 
-## Issue #6: Security Headers (Helmet.js equivalent)
+## Issue #6: Security Headers (Helmet.js Equivalent)
 
-**Title:** `[SECURITY] Dodać security headers (CSP, X-Frame-Options, etc.)`
+**Title:** `[SECURITY] Add security headers (CSP, X-Frame-Options, etc.)`
 
 **Labels:** `security`, `enhancement`, `priority: medium`, `backend`
 
 **Description:**
 ```markdown
-## 🔐 Opis
-Dodać security headers aby chronić przed różnymi atakami:
+## 🔐 Description
+Add security headers to protect against various attacks:
 - XSS
 - Clickjacking
 - MIME sniffing
-- itp.
+- etc.
 
-## ⚠️ Priorytet
-- [x] Średni - planowane ulepszenie
+## ⚠️ Priority
+- [x] Medium - planned improvement
 
-## 💡 Proponowane rozwiązanie
-Dodać middleware w Program.cs:
+## 💡 Proposed Solution
+Add middleware in Program.cs:
 
 ```csharp
 app.Use(async (context, next) =>
@@ -262,15 +262,15 @@ app.Use(async (context, next) =>
 });
 ```
 
-Lub użyć biblioteki: `NWebsec.AspNetCore.Middleware`
+Or use library: `NWebsec.AspNetCore.Middleware`
 
-## ✅ Kryteria akceptacji
-- [ ] Wszystkie security headers dodane
-- [ ] CSP skonfigurowane dla aplikacji
-- [ ] Testy weryfikujące obecność headers
-- [ ] Dokumentacja w README
+## ✅ Acceptance Criteria
+- [ ] All security headers added
+- [ ] CSP configured for application
+- [ ] Tests verifying header presence
+- [ ] Documentation in README
 
-## 📚 Dokumentacja
+## 📚 Documentation
 - https://github.com/NWebsec/NWebsec
 - https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
 ```
@@ -279,109 +279,109 @@ Lub użyć biblioteki: `NWebsec.AspNetCore.Middleware`
 
 ## Issue #7: 2FA (Two-Factor Authentication)
 
-**Title:** `[SECURITY] Implementować 2FA dla operatorów (SMS)`
+**Title:** `[SECURITY] Implement 2FA for operators (SMS)`
 
 **Labels:** `security`, `enhancement`, `priority: low`, `backend`, `frontend`
 
 **Description:**
 ```markdown
-## 🔐 Opis
-Dodatkowa warstwa bezpieczeństwa - 2FA przez SMS dla operatorów.
+## 🔐 Description
+Additional security layer - 2FA via SMS for operators.
 
-## ⚠️ Priorytet
-- [x] Niski - nice to have
+## ⚠️ Priority
+- [x] Low - nice to have
 
-## 💡 Proponowane rozwiązanie
-1. Użytkownik włącza 2FA w ustawieniach
-2. Przy logowaniu po prawidłowym haśle:
-   - Wysyłany jest SMS z kodem (6 cyfr)
-   - Użytkownik ma 5 minut na wpisanie kodu
-   - Po 3 błędnych próbach - timeout 15 minut
+## 💡 Proposed Solution
+1. User enables 2FA in settings
+2. When logging in after correct password:
+   - SMS sent with code (6 digits)
+   - User has 5 minutes to enter code
+   - After 3 wrong attempts - 15 minute timeout
 
-Serwisy SMS:
-- Twilio (płatne, globalne)
-- SMS API (polskie)
+SMS Services:
+- Twilio (paid, global)
+- SMS API (Polish)
 - Vonage/Nexmo
 
-## ✅ Kryteria akceptacji
+## ✅ Acceptance Criteria
 - [ ] Endpoint POST /api/auth/enable-2fa
 - [ ] Endpoint POST /api/auth/verify-2fa
-- [ ] Wysyłanie SMS z kodem
-- [ ] Weryfikacja kodu (timeout 5 min)
-- [ ] Rate limiting dla wysyłania kodów (max 3/h)
-- [ ] UI w panelu operatora (włącz/wyłącz 2FA)
-- [ ] Testy E2E
-- [ ] Dokumentacja
+- [ ] Send SMS with code
+- [ ] Verify code (5 min timeout)
+- [ ] Rate limiting for sending codes (max 3/h)
+- [ ] UI in operator panel (enable/disable 2FA)
+- [ ] E2E tests
+- [ ] Documentation
 
-## 📚 Dokumentacja
+## 📚 Documentation
 - https://www.twilio.com/docs/verify/quickstarts
 ```
 
 ---
 
-## Issue #8: Logowanie security events
+## Issue #8: Security Event Logging
 
-**Title:** `[SECURITY] Dodać audit log dla zdarzeń bezpieczeństwa`
+**Title:** `[SECURITY] Add audit log for security events`
 
 **Labels:** `security`, `enhancement`, `priority: medium`, `backend`
 
 **Description:**
 ```markdown
-## 🔐 Opis
-Logować wszystkie ważne zdarzenia bezpieczeństwa:
-- Nieudane próby logowania
-- Udane logowania
-- Zmiany hasła
-- Włączenie/wyłączenie 2FA
-- Zmiany danych wrażliwych
-- Suspicious activity (wiele requestów z jednego IP)
+## 🔐 Description
+Log all important security events:
+- Failed login attempts
+- Successful logins
+- Password changes
+- 2FA enable/disable
+- Changes to sensitive data
+- Suspicious activity (many requests from one IP)
 
-## ⚠️ Priorytet
-- [x] Średni - planowane ulepszenie
+## ⚠️ Priority
+- [x] Medium - planned improvement
 
-## 💡 Proponowane rozwiązanie
-Użyć Serilog z sink do:
-- Plik (local development)
+## 💡 Proposed Solution
+Use Serilog with sinks to:
+- File (local development)
 - Azure Application Insights (production)
-- Seq (opcjonalnie dla dev)
+- Seq (optionally for dev)
 
-Przykład:
+Example:
 ```csharp
 Log.Information("Login attempt: {Email} from {IP}", email, ipAddress);
 Log.Warning("Failed login attempt #{Count} for {Email}", failedAttempts, email);
 Log.Error("Suspicious activity detected: {IP} made {Count} requests in 1 minute", ip, count);
 ```
 
-## ✅ Kryteria akceptacji
-- [ ] Serilog skonfigurowany
-- [ ] Wszystkie security events logowane
-- [ ] Structured logging (łatwe do zapytań)
-- [ ] Dashboard do przeglądania logów (Seq/App Insights)
-- [ ] Alerty przy suspicious activity
-- [ ] Dokumentacja
+## ✅ Acceptance Criteria
+- [ ] Serilog configured
+- [ ] All security events logged
+- [ ] Structured logging (easy to query)
+- [ ] Dashboard for viewing logs (Seq/App Insights)
+- [ ] Alerts for suspicious activity
+- [ ] Documentation
 
-## 📚 Dokumentacja
+## 📚 Documentation
 - https://serilog.net/
 - https://datalust.co/seq
 ```
 
 ---
 
-## Issue #9: HTTPS wymuszony na produkcji
+## Issue #9: Enforce HTTPS in Production
 
-**Title:** `[SECURITY] Wymuszać HTTPS na produkcji`
+**Title:** `[SECURITY] Enforce HTTPS in production`
 
 **Labels:** `security`, `devops`, `priority: high`, `backend`
 
 **Description:**
 ```markdown
-## 🔐 Opis
-Cała komunikacja musi być przez HTTPS. HTTP automatycznie przekierowywany na HTTPS.
+## 🔐 Description
+All communication must be over HTTPS. HTTP automatically redirected to HTTPS.
 
-## ⚠️ Priorytet
-- [x] Wysoki - krytyczne przed wdrożeniem na produkcję
+## ⚠️ Priority
+- [x] High - critical before production deployment
 
-## 💡 Proponowane rozwiązanie
+## 💡 Proposed Solution
 Backend:
 ```csharp
 if (app.Environment.IsProduction())
@@ -394,46 +394,46 @@ if (app.Environment.IsProduction())
 Frontend (vite.config.ts):
 ```typescript
 server: {
-  https: true // tylko dla local testów HTTPS
+  https: true // only for local HTTPS tests
 }
 ```
 
-Produkcja:
-- Azure App Service: automatyczne HTTPS
-- Let's Encrypt: darmowy certyfikat SSL
+Production:
+- Azure App Service: automatic HTTPS
+- Let's Encrypt: free SSL certificate
 
-## ✅ Kryteria akceptacji
-- [ ] HTTPS wymuszony na produkcji
-- [ ] HSTS header dodany (max-age=31536000)
+## ✅ Acceptance Criteria
+- [ ] HTTPS enforced in production
+- [ ] HSTS header added (max-age=31536000)
 - [ ] HTTP → HTTPS redirect
-- [ ] Certyfikat SSL skonfigurowany
-- [ ] Mixed content warnings naprawione
-- [ ] Testy weryfikujące HTTPS
-- [ ] Dokumentacja deployment
+- [ ] SSL certificate configured
+- [ ] Mixed content warnings fixed
+- [ ] Tests verifying HTTPS
+- [ ] Deployment documentation
 
-## 📚 Dokumentacja
+## 📚 Documentation
 - https://letsencrypt.org/
 - https://learn.microsoft.com/en-us/aspnet/core/security/enforcing-ssl
 ```
 
 ---
 
-## Issue #10: Szyfrowanie wrażliwych danych (GDPR)
+## Issue #10: Encrypt Sensitive Data (GDPR)
 
-**Title:** `[SECURITY] Szyfrować wrażliwe dane w bazie (numery telefonów, emaile)`
+**Title:** `[SECURITY] Encrypt sensitive data in database (phone numbers, emails)`
 
 **Labels:** `security`, `enhancement`, `priority: medium`, `backend`, `database`
 
 **Description:**
 ```markdown
-## 🔐 Opis
-Zgodnie z GDPR, wrażliwe dane osobowe powinny być szyfrowane w bazie danych.
+## 🔐 Description
+According to GDPR, sensitive personal data should be encrypted in the database.
 
-## ⚠️ Priorytet
-- [x] Średni - wymagane dla GDPR compliance
+## ⚠️ Priority
+- [x] Medium - required for GDPR compliance
 
-## 💡 Proponowane rozwiązanie
-Użyć Entity Framework Core Value Converters:
+## 💡 Proposed Solution
+Use Entity Framework Core Value Converters:
 
 ```csharp
 public class EncryptedStringConverter : ValueConverter<string, string>
@@ -455,59 +455,58 @@ public class EncryptedStringConverter : ValueConverter<string, string>
     }
 }
 
-// W DbContext:
+// In DbContext:
 modelBuilder.Entity<User>()
     .Property(u => u.PhoneNumber)
     .HasConversion<EncryptedStringConverter>();
 ```
 
-Klucz szyfrowania w Azure Key Vault (nie w appsettings!).
+Encryption key in Azure Key Vault (not in appsettings!).
 
-## ✅ Kryteria akceptacji
-- [ ] Numery telefonów szyfrowane w bazie
-- [ ] Emaile szyfrowane w bazie
-- [ ] Klucz szyfrowania w Azure Key Vault
-- [ ] Migracja istniejących danych
-- [ ] Testy szyfrowania/deszyfrowania
-- [ ] Dokumentacja GDPR compliance
+## ✅ Acceptance Criteria
+- [ ] Phone numbers encrypted in database
+- [ ] Emails encrypted in database
+- [ ] Encryption key in Azure Key Vault
+- [ ] Migration of existing data
+- [ ] Encryption/decryption tests
+- [ ] GDPR compliance documentation
 
-## 📚 Dokumentacja
+## 📚 Documentation
 - https://learn.microsoft.com/en-us/ef/core/modeling/value-conversions
 - https://azure.microsoft.com/en-us/products/key-vault
 ```
 
 ---
 
-## 🚀 Jak utworzyć te Issues?
+## 🚀 How to Create These Issues?
 
-### Opcja 1: Ręcznie przez GitHub
-1. Wejdź na https://github.com/TWOJ_USERNAME/AutoSOS/issues
-2. New Issue → wybierz "Security Enhancement"
-3. Skopiuj tytuł i opis z powyższych tasków
-4. Dodaj odpowiednie labels
+### Option 1: Manually via GitHub
+1. Go to https://github.com/YOUR_USERNAME/AutoSOS/issues
+2. New Issue → select "Security Enhancement"
+3. Copy title and description from above tasks
+4. Add appropriate labels
 5. Submit
 
-### Opcja 2: Przez GitHub CLI
+### Option 2: Via GitHub CLI
 ```bash
 # Issue #1
 gh issue create \
-  --title "[SECURITY] Implementować rate limiting dla logowania i rejestracji" \
+  --title "[SECURITY] Implement rate limiting for login and registration" \
   --body-file issue1.md \
   --label security,enhancement,priority:high,backend
 
 # Issue #2
 gh issue create \
-  --title "[SECURITY] Dodać CAPTCHA po 3 nieudanych próbach logowania" \
+  --title "[SECURITY] Add CAPTCHA after 3 failed login attempts" \
   --body-file issue2.md \
   --label security,enhancement,priority:medium,frontend,backend
 
-# ... i tak dalej
+# ... and so on
 ```
 
-### Opcja 3: Bulk import (script)
-Mogę utworzyć skrypt PowerShell/Bash, który utworzy wszystkie issues naraz.
+### Option 3: Bulk Import (Script)
+I can create a PowerShell/Bash script that creates all issues at once.
 
 ---
 
-**Powodzenia z zabezpieczaniem AutoSOS!** 🔐
-
+**Good luck securing AutoSOS!** 🔐
