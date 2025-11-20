@@ -14,6 +14,8 @@ public class AutoSOSDbContext : DbContext
     public DbSet<Request> Requests { get; set; }
     public DbSet<Offer> Offers { get; set; }
     public DbSet<Operator> Operators { get; set; }
+    public DbSet<Equipment> Equipment { get; set; }
+    public DbSet<OperatorEquipment> OperatorEquipment { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +81,44 @@ public class AutoSOSDbContext : DbContext
                 .WithOne(u => u.Operator)
                 .HasForeignKey<Operator>(e => e.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Equipment configuration
+        modelBuilder.Entity<Equipment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.RequiresTransport).IsRequired();
+        });
+
+        // OperatorEquipment - many-to-many relationship
+        modelBuilder.Entity<OperatorEquipment>(entity =>
+        {
+            entity.ToTable("OperatorEquipment");
+            entity.HasKey(e => new { e.OperatorId, e.EquipmentId });
+            
+            entity.HasOne(e => e.Operator)
+                .WithMany(o => o.OperatorEquipment)
+                .HasForeignKey(e => e.OperatorId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(e => e.Equipment)
+                .WithMany()
+                .HasForeignKey(e => e.EquipmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            entity.HasIndex(e => e.OperatorId);
+            entity.HasIndex(e => e.EquipmentId);
+        });
+
+        // Request configuration - add RequiredEquipment relationship
+        modelBuilder.Entity<Request>(entity =>
+        {
+            entity.HasOne(e => e.RequiredEquipment)
+                .WithMany()
+                .HasForeignKey(e => e.RequiredEquipmentId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

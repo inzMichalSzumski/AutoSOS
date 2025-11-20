@@ -67,6 +67,23 @@ public static class AuthEndpoints
                 CreatedAt = DateTime.UtcNow
             };
 
+            // Dodaj sprzęt do operatora
+            if (dto.EquipmentIds != null && dto.EquipmentIds.Any())
+            {
+                var equipment = await db.Equipment
+                    .Where(e => dto.EquipmentIds.Contains(e.Id))
+                    .ToListAsync();
+                
+                foreach (var eq in equipment)
+                {
+                    operatorEntity.OperatorEquipment.Add(new OperatorEquipment
+                    {
+                        OperatorId = operatorEntity.Id,
+                        EquipmentId = eq.Id
+                    });
+                }
+            }
+
             db.Users.Add(user);
             db.Operators.Add(operatorEntity);
             await db.SaveChangesAsync();

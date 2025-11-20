@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { apiClient } from '../../services/api'
+import { apiClient, type Equipment } from '../../services/api'
 import type { HelpRequest, Location } from '../../types'
 
 export default function RequestHelp() {
@@ -17,8 +17,28 @@ export default function RequestHelp() {
 
   const [phoneNumber, setPhoneNumber] = useState('')
   const [description, setDescription] = useState('')
+  const [requiredEquipmentId, setRequiredEquipmentId] = useState<string | null>(null)
+  const [equipment, setEquipment] = useState<Equipment[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
+  const [loadingEquipment, setLoadingEquipment] = useState(true)
+  const [equipmentError, setEquipmentError] = useState<string | null>(null)
+
+  // Pobierz dostępne sprzęty z API
+  useEffect(() => {
+    const loadEquipment = async () => {
+      try {
+        const response = await apiClient.getEquipment()
+        setEquipment(response.equipment)
+      } catch (err) {
+        console.error('Error loading equipment:', err)
+        setLocationError('Nie udało się załadować listy sprzętów')
+      } finally {
+        setLoadingEquipment(false)
+      }
+    }
+    loadEquipment()
+  }, [])
 
   // Jeśli brak danych, przekieruj do głównej strony
   useEffect(() => {
@@ -60,6 +80,7 @@ export default function RequestHelp() {
         toLatitude: request.toLocation?.lat,
         toLongitude: request.toLocation?.lng,
         description: request.description,
+        requiredEquipmentId: requiredEquipmentId || undefined,
       })
 
       // 2. Update request with ID from backend
@@ -172,6 +193,71 @@ export default function RequestHelp() {
                 rows={4}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition resize-none"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Jaka pomoc jest potrzebna?
+              </label>
+              {loadingEquipment ? (
+                <div className="text-sm text-gray-500">Ładowanie opcji...</div>
+              ) : (
+                <>
+                  {equipmentError && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                      <p className="text-yellow-800 text-sm">{equipmentError}</p>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    {equipment.map((eq) => {
+                      const isDisabled = eq.requiresTransport && !toLocation
+                      return (
+                        <label 
+                          key={eq.id} 
+                          className={`flex items-start gap-3 p-3 border border-gray-200 rounded-lg transition-colors ${
+                            isDisabled 
+                              ? 'opacity-50 cursor-not-allowed bg-gray-50' 
+                              : 'cursor-pointer hover:bg-gray-50'
+                          }`}
+                          onClick={(e) => {
+                            if (isDisabled) {
+                              e.preventDefault()
+                              setEquipmentError('Aby wybrać sprzęt wymagający transportu (laweta), musisz najpierw ustawić punkt docelowy na mapie.')
+                            }
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="equipment"
+                            checked={requiredEquipmentId === eq.id}
+                            onChange={() => {
+                              if (isDisabled) {
+                                setEquipmentError('Aby wybrać sprzęt wymagający transportu (laweta), musisz najpierw ustawić punkt docelowy na mapie.')
+                                return
+                              }
+                              setEquipmentError(null)
+                              setRequiredEquipmentId(eq.id)
+                            }}
+                            disabled={isDisabled}
+                            className="w-4 h-4 text-primary-600 focus:ring-primary-500 mt-0.5 disabled:cursor-not-allowed"
+                          />
+                          <div className="flex-1">
+                            <span className="text-gray-700 font-medium">{eq.name}</span>
+                            {eq.description && (
+                              <p className="text-xs text-gray-500 mt-0.5">{eq.description}</p>
+                            )}
+                            {isDisabled && (
+                              <p className="text-xs text-yellow-600 mt-1 font-medium">
+                                ⚠️ Wymaga ustawienia punktu docelowego
+                              </p>
+                            )}
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
             </div>
 
             <button

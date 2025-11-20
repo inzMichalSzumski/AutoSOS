@@ -49,6 +49,7 @@ public static class RequestEndpoints
                 ToLatitude = dto.ToLatitude,
                 ToLongitude = dto.ToLongitude,
                 Description = dto.Description,
+                RequiredEquipmentId = dto.RequiredEquipmentId,
                 Status = RequestStatus.Searching, // Zmieniamy na Searching, żeby operatorzy widzieli zgłoszenie
                 CreatedAt = DateTime.UtcNow
             };
@@ -106,6 +107,7 @@ public static class RequestEndpoints
         // PUT /api/requests/{id}/cancel - Anulowanie zgłoszenia
         group.MapPut("/{id:guid}/cancel", async (
             Guid id,
+            CancelRequestDto dto,
             AutoSOSDbContext db,
             IHubContext<RequestHub> hub) =>
         {
@@ -113,6 +115,12 @@ public static class RequestEndpoints
             
             if (request == null)
                 return Results.NotFound(new { error = "Request not found" });
+
+            // Security: Verify that the phone number matches the request owner
+            if (request.PhoneNumber != dto.PhoneNumber)
+            {
+                return Results.Forbid();
+            }
 
             // Można anulować tylko zgłoszenia w statusie Searching lub Pending
             if (request.Status != RequestStatus.Searching && request.Status != RequestStatus.Pending)
@@ -154,13 +162,22 @@ public static class RequestEndpoints
                 return Results.Unauthorized();
             }
 
-            // Get operator location
-            var operatorEntity = await db.Operators.FindAsync(operatorId);
+            // Get operator location and equipment
+            var operatorEntity = await db.Operators
+                .Include(o => o.OperatorEquipment)
+                    .ThenInclude(oe => oe.Equipment)
+                .FirstOrDefaultAsync(o => o.Id == operatorId);
+            
             if (operatorEntity == null || !operatorEntity.IsAvailable || 
                 !operatorEntity.CurrentLatitude.HasValue || !operatorEntity.CurrentLongitude.HasValue)
             {
                 return Results.Ok(new { requests = Array.Empty<object>() });
             }
+            
+            // Pobierz ID sprzętów które operator posiada
+            var operatorEquipmentIds = operatorEntity.OperatorEquipment
+                .Select(oe => oe.EquipmentId)
+                .ToList();
 
             // Get pending and searching requests
             var availableRequests = await db.Requests
@@ -168,7 +185,7 @@ public static class RequestEndpoints
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
-            // Calculate distance and filter by service radius
+            // Calculate distance and filter by service radius and equipment
             var requestsWithDistance = availableRequests
                 .Select(r => new
                 {
@@ -179,6 +196,8 @@ public static class RequestEndpoints
                     r.ToLatitude,
                     r.ToLongitude,
                     r.Description,
+                    r.RequiredEquipmentId,
+                    r.RequiredEquipment,
                     r.Status,
                     r.CreatedAt,
                     Distance = GeolocationService.CalculateDistance(
@@ -186,9 +205,14 @@ public static class RequestEndpoints
                         operatorEntity.CurrentLongitude!.Value,
                         r.FromLatitude,
                         r.FromLongitude
-                    )
+                    ),
+                    HasRequiredEquipment = r.RequiredEquipmentId.HasValue
+                        ? operatorEquipmentIds.Contains(r.RequiredEquipmentId.Value)
+                        : true // Jeśli nie wymagany konkretny sprzęt, przyjmij wszystkich
                 })
                 .Where(r => r.Distance <= (operatorEntity.ServiceRadiusKm ?? 20))
+                // Filtruj na podstawie wymaganego sprzętu
+                .Where(r => r.HasRequiredEquipment)
                 .OrderBy(r => r.Distance)
                 .Select(r => new
                 {
@@ -199,6 +223,8 @@ public static class RequestEndpoints
                     r.ToLatitude,
                     r.ToLongitude,
                     r.Description,
+                    RequiredEquipmentId = r.RequiredEquipmentId,
+                    RequiredEquipmentName = r.RequiredEquipment != null ? r.RequiredEquipment.Name : null,
                     r.Status,
                     r.CreatedAt,
                     Distance = Math.Round(r.Distance, 1)

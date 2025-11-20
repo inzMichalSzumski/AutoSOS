@@ -41,10 +41,10 @@ const POIIcon = new Icon({
   iconAnchor: [10, 32],
 })
 
-// Ikonka lawety dla operatorów
-const TowTruckIcon = new DivIcon({
-  html: '<div style="font-size: 28px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🚛</div>',
-  className: 'tow-truck-icon',
+// Ikonka klucza płaskiego (klucza do naprawy) dla operatorów
+const OperatorIcon = new DivIcon({
+  html: '<div style="font-size: 28px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🔧</div>',
+  className: 'operator-icon',
   iconSize: [28, 28],
   iconAnchor: [14, 14],
 })
@@ -125,7 +125,7 @@ function MapCenterTracker({
           <Marker
             key={operator.id}
             position={[operator.currentLatitude, operator.currentLongitude]}
-            icon={TowTruckIcon}
+            icon={OperatorIcon}
           />
         )
       ))}
@@ -189,11 +189,11 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   const [searchResults, setSearchResults] = useState<(GeocodingResult | POIResult)[]>([])
   const [showResults, setShowResults] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
-  const [searchMode, setSearchMode] = useState<'address' | 'poi'>('address')
+  const [searchMode] = useState<'address' | 'poi'>('address') // Always use address mode - POI search removed
   const [poiMarkers, setPoiMarkers] = useState<POIResult[]>([])
   const [showFormPanel, setShowFormPanel] = useState(false)
   const [isSelectingStart, setIsSelectingStart] = useState(false) // Tryb wyboru lokalizacji startowej
-  const [destinationConfirmed, setDestinationConfirmed] = useState(!!initialToLocation) // Jeśli mamy początkową lokalizację docelową, ustaw jako potwierdzoną
+  const [isFromLocationFromGPS, setIsFromLocationFromGPS] = useState(false) // Czy punkt startowy jest z geolokalizacji
   const [routeDistance, setRouteDistance] = useState<number | null>(null) // Dystans między punktami
   const [routeCoordinates, setRouteCoordinates] = useState<RoutePoint[]>([]) // Współrzędne trasy
   const [routeDuration, setRouteDuration] = useState<number | null>(null) // Czas trasy w sekundach
@@ -201,39 +201,19 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const watchPositionIdRef = useRef<number | null>(null) // ID watchPosition do zatrzymania
 
   // Ustaw początkową lokalizację i centrum mapy jeśli są przekazane
   useEffect(() => {
     if (initialFromLocation) {
       setMapCenter([initialFromLocation.lat, initialFromLocation.lng])
+      setIsFromLocationFromGPS(false) // Początkowa lokalizacja nie jest z GPS
       // Nie wywołuj getCurrentLocation jeśli mamy początkową lokalizację
     } else {
       getCurrentLocation()
     }
   }, [initialFromLocation])
 
-  // Jeśli mamy początkową lokalizację docelową, automatycznie pobierz trasę
-  useEffect(() => {
-    if (initialFromLocation && initialToLocation && !routeDistance) {
-      // Użyj async funkcji wewnątrz useEffect
-      const loadRoute = async () => {
-        const route = await getRoute(
-          initialFromLocation.lat,
-          initialFromLocation.lng,
-          initialToLocation.lat,
-          initialToLocation.lng
-        )
-        
-        if (route) {
-          setRouteCoordinates(route.coordinates)
-          setRouteDistance(route.distance)
-          setRouteDuration(route.duration)
-          setDestinationConfirmed(true)
-        }
-      }
-      loadRoute()
-    }
-  }, [])
 
   // Automatycznie włącz tryb wyboru na mapie, jeśli nie ma lokalizacji startowej
   useEffect(() => {
@@ -277,6 +257,12 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
       return
     }
 
+    // Zatrzymaj poprzednie śledzenie jeśli istnieje
+    if (watchPositionIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchPositionIdRef.current)
+      watchPositionIdRef.current = null
+    }
+
     // Wyczyść poprzedni błąd
     setLocationError(null)
 
@@ -286,6 +272,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
       maximumAge: 60000, // Akceptuj pozycję starszą niż 1 minuta
     }
 
+    // Najpierw pobierz aktualną pozycję
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const loc = {
@@ -296,7 +283,29 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         setMapCenter([loc.lat, loc.lng])
         setLocationError(null)
         setIsSelectingStart(false)
+        setIsFromLocationFromGPS(true) // Oznacz że lokalizacja jest z GPS
         console.log('Geolokalizacja udana:', loc)
+
+        // Rozpocznij śledzenie zmian lokalizacji w czasie rzeczywistym
+        watchPositionIdRef.current = navigator.geolocation.watchPosition(
+          (position) => {
+            const loc = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            }
+            setFromLocation(loc)
+            // Aktualizuj centrum mapy tylko jeśli użytkownik nie przesunął mapy ręcznie
+            if (isFromLocationFromGPS) {
+              setMapCenter([loc.lat, loc.lng])
+            }
+            console.log('Lokalizacja zaktualizowana:', loc)
+          },
+          (error) => {
+            console.error('Błąd śledzenia lokalizacji:', error)
+            // Nie pokazuj błędu użytkownikowi - tylko loguj
+          },
+          options
+        )
       },
       (error) => {
         let errorMessage = 'Nie udało się uzyskać lokalizacji. '
@@ -331,7 +340,34 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               setFromLocation(loc)
               setMapCenter([loc.lat, loc.lng])
               setLocationError(null)
+              setIsFromLocationFromGPS(true) // Oznacz że lokalizacja jest z GPS
               console.log('Geolokalizacja udana (fallback):', loc)
+
+              // Rozpocznij śledzenie zmian lokalizacji w czasie rzeczywistym
+              if (watchPositionIdRef.current === null) {
+                watchPositionIdRef.current = navigator.geolocation.watchPosition(
+                  (position) => {
+                    const loc = {
+                      lat: position.coords.latitude,
+                      lng: position.coords.longitude,
+                    }
+                    setFromLocation(loc)
+                    // Aktualizuj centrum mapy tylko jeśli użytkownik nie przesunął mapy ręcznie
+                    if (isFromLocationFromGPS) {
+                      setMapCenter([loc.lat, loc.lng])
+                    }
+                    console.log('Lokalizacja zaktualizowana (fallback):', loc)
+                  },
+                  (error) => {
+                    console.error('Błąd śledzenia lokalizacji (fallback):', error)
+                  },
+                  {
+                    enableHighAccuracy: false,
+                    timeout: 10000,
+                    maximumAge: 300000,
+                  }
+                )
+              }
             },
             () => {
               // Jeśli fallback też nie zadziała, pozostaw komunikat błędu
@@ -408,50 +444,26 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
     }
   }, [searchQuery, searchMode, fromLocation, mapCenter])
 
+  // Cleanup: zatrzymaj śledzenie GPS przy odmontowaniu komponentu
+  useEffect(() => {
+    return () => {
+      if (watchPositionIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchPositionIdRef.current)
+        watchPositionIdRef.current = null
+      }
+    }
+  }, [])
+
   const handleSearchResultClick = (result: GeocodingResult | POIResult) => {
     const loc = { lat: result.lat, lng: result.lon }
     
     // Wyszukiwanie zawsze ustawia lokalizację docelową
     setToLocation(loc)
     setMapCenter([loc.lat, loc.lng])
-    setDestinationConfirmed(false) // Reset potwierdzenia przy nowym wyborze
-    setRouteDistance(null)
-    setRouteCoordinates([]) // Reset trasy
-    setRouteDuration(null)
     
     setSearchQuery('')
     setShowResults(false)
     setPoiMarkers([])
-  }
-
-  const handleConfirmDestination = async () => {
-    if (!fromLocation || !toLocation) return
-    
-    setDestinationConfirmed(true)
-    
-    // Pobierz trasę po ulicach
-    const route = await getRoute(
-      fromLocation.lat,
-      fromLocation.lng,
-      toLocation.lat,
-      toLocation.lng
-    )
-    
-    if (route) {
-      setRouteCoordinates(route.coordinates)
-      setRouteDistance(route.distance)
-      setRouteDuration(route.duration)
-    } else {
-      // Fallback - użyj odległości w linii prostej jeśli nie udało się pobrać trasy
-      const distance = calculateDistance(
-        fromLocation.lat,
-        fromLocation.lng,
-        toLocation.lat,
-        toLocation.lng
-      )
-      setRouteDistance(distance)
-      setRouteCoordinates([]) // Brak trasy - pokaż prostą linię
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -512,13 +524,21 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
           <MapCenterTracker
             fromPosition={fromLocation}
             toPosition={toLocation}
-            onFromPositionChange={setFromLocation}
+            onFromPositionChange={(loc) => {
+              setFromLocation(loc)
+              setIsFromLocationFromGPS(false) // Oznacz że lokalizacja jest ustawiona ręcznie
+              // Zatrzymaj śledzenie GPS gdy użytkownik ustawia lokalizację ręcznie
+              if (watchPositionIdRef.current !== null) {
+                navigator.geolocation.clearWatch(watchPositionIdRef.current)
+                watchPositionIdRef.current = null
+              }
+            }}
             isSelectingStart={isSelectingStart || !fromLocation}
             routeCoordinates={routeCoordinates}
             nearbyOperators={nearbyOperators}
           />
-          {/* Fit bounds when destination is confirmed */}
-          {destinationConfirmed && fromLocation && toLocation && (
+          {/* Fit bounds when both locations are set */}
+          {fromLocation && toLocation && (
             <MapBounds fromLocation={fromLocation} toLocation={toLocation} />
           )}
           {/* POI Markers */}
@@ -591,61 +611,22 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
       {/* Top Search Bar */}
       <div className={`absolute left-4 right-20 z-10 max-w-2xl ${locationError ? 'top-24' : 'top-4'}`}>
         <div className="bg-white rounded-lg shadow-xl p-2">
-          <div className="flex gap-2">
-            {/* Search Mode Toggle */}
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchMode('address')
-                  setSearchQuery('')
-                  setPoiMarkers([])
-                }}
-                className={`px-3 py-1 rounded text-sm font-medium transition ${
-                  searchMode === 'address'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Adres
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchMode('poi')
-                  setSearchQuery('')
-                  setPoiMarkers([])
-                }}
-                className={`px-3 py-1 rounded text-sm font-medium transition ${
-                  searchMode === 'poi'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Warsztaty
-              </button>
-            </div>
-
-            {/* Search Input */}
-            <div className="flex-1 relative">
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setShowResults(true)}
-                placeholder={
-                  searchMode === 'address'
-                    ? 'Dokąd chcesz się udać?'
-                    : 'Szukaj warsztatów, wulkanizacji, serwisów...'
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-              />
+          {/* Search Input */}
+          <div className="relative">
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setShowResults(true)}
+              placeholder="Dokąd chcesz się udać?"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+            />
               
-              {/* Search Results Dropdown */}
-              {showResults && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 max-h-64 overflow-y-auto z-30">
-                  {searchResults.map((result, idx) => (
+            {/* Search Results Dropdown */}
+            {showResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 max-h-64 overflow-y-auto z-30">
+                {searchResults.map((result, idx) => (
                     <button
                       key={idx}
                       type="button"
@@ -675,12 +656,11 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
                 </div>
               )}
               
-              {isSearching && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-30">
-                  <div className="text-center text-gray-500">Szukanie...</div>
-                </div>
-              )}
-            </div>
+            {isSearching && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-30">
+                <div className="text-center text-gray-500">Szukanie...</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -692,6 +672,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
             type="button"
             onClick={() => {
               setIsSelectingStart(false)
+              setIsFromLocationFromGPS(false) // Lokalizacja ustawiona ręcznie
               if (fromLocation) {
                 setLocationError(null)
               }
@@ -712,77 +693,172 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         </div>
       )}
 
-      {/* Confirm Destination Button - pokazuje się po wybraniu adresu docelowego */}
-      {toLocation && !destinationConfirmed && (
-        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20">
-          <div className="bg-white rounded-lg shadow-xl p-4 max-w-sm">
-            <p className="text-sm text-gray-700 mb-3 text-center">
-              Czy to ostateczny wybór?
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleConfirmDestination}
-                className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition"
-              >
-                Tak
-              </button>
+      {/* Distance Info Panel - zawsze widoczny */}
+      <div className={`absolute ${locationError ? 'top-24' : 'top-4'} right-4 z-20 bg-white rounded-lg shadow-xl p-4 max-w-xs`}>
+        {/* Start Location */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium text-gray-500">Punkt startowy</label>
+            {fromLocation && (
+              <div className="flex items-center gap-2">
+                {!isFromLocationFromGPS && (
+                  <button
+                    type="button"
+                    onClick={getCurrentLocation}
+                    className="text-primary-600 hover:text-primary-700 transition"
+                    title="Odśwież lokalizację GPS"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSelectingStart(true)
+                    setFromLocation(null)
+                    setIsFromLocationFromGPS(false)
+                    // Zatrzymaj śledzenie GPS gdy użytkownik edytuje lokalizację
+                    if (watchPositionIdRef.current !== null) {
+                      navigator.geolocation.clearWatch(watchPositionIdRef.current)
+                      watchPositionIdRef.current = null
+                    }
+                  }}
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  title="Zmień punkt startowy"
+                >
+                  Edytuj
+                </button>
+              </div>
+            )}
+          </div>
+          {fromLocation ? (
+            <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5">
+              {fromLocation.lat.toFixed(4)}, {fromLocation.lng.toFixed(4)}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
+              Nie ustawiono
+            </div>
+          )}
+        </div>
+
+        {/* Destination Location */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium text-gray-500">Punkt docelowy</label>
+            {toLocation ? (
               <button
                 type="button"
                 onClick={() => setToLocation(null)}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg transition"
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                title="Zmień punkt docelowy"
               >
-                Nie
+                Edytuj
               </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  // Skup się na polu wyszukiwania, aby użytkownik mógł wpisać adres docelowy
+                  if (searchInputRef.current) {
+                    searchInputRef.current.focus()
+                  }
+                }}
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                title="Ustaw punkt docelowy"
+              >
+                Ustaw
+              </button>
+            )}
+          </div>
+          {toLocation ? (
+            <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5">
+              {toLocation.lat.toFixed(4)}, {toLocation.lng.toFixed(4)}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Distance Info - pokazuje się po potwierdzeniu docelowego */}
-      {destinationConfirmed && routeDistance !== null && fromLocation && toLocation && (
-        <div className="absolute top-24 left-4 z-20 bg-white rounded-lg shadow-xl p-4 max-w-xs">
-          <div className="flex items-center gap-2 mb-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-primary-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-            </svg>
-            <h3 className="font-semibold text-gray-900">Dystans</h3>
-          </div>
-          <p className="text-2xl font-bold text-primary-600 mb-1">
-            {routeDistance.toFixed(1)} km
-          </p>
-          {routeDuration && (
-            <p className="text-sm text-gray-600 mb-1">
-              ~{Math.round(routeDuration / 60)} min jazdy
-            </p>
+          ) : (
+            <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
+              Nie ustawiono
+            </div>
           )}
-          <p className="text-xs text-gray-500 mb-3">
-            {routeCoordinates.length > 0 ? 'Trasa po ulicach' : 'Odległość w linii prostej'}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              navigate('/request-help', {
-                state: {
-                  fromLocation,
-                  toLocation,
-                  routeDistance,
-                  routeDuration
-                }
-              })
-            }}
-            className="w-full bg-danger-600 hover:bg-danger-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 transform hover:scale-105 shadow-lg"
-          >
-            🚨 Wezwij pomoc
-          </button>
         </div>
-      )}
+
+        {/* Distance Info */}
+        {routeDistance !== null && fromLocation && toLocation ? (
+          <>
+            <div className="flex items-center gap-2 mb-2 pt-2 border-t border-gray-200">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-primary-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              <h3 className="font-semibold text-gray-900">Dystans</h3>
+            </div>
+            <p className="text-2xl font-bold text-primary-600 mb-1">
+              {routeDistance.toFixed(1)} km
+            </p>
+            {routeDuration && (
+              <p className="text-sm text-gray-600 mb-1">
+                ~{Math.round(routeDuration / 60)} min jazdy
+              </p>
+            )}
+            <p className="text-xs text-gray-500 mb-3">
+              {routeCoordinates.length > 0 ? 'Trasa po ulicach' : 'Odległość w linii prostej'}
+            </p>
+          </>
+        ) : (
+          <div className="pt-2 border-t border-gray-200">
+            <p className="text-sm text-gray-400 text-center py-2">
+              Ustaw oba punkty, aby zobaczyć dystans
+            </p>
+          </div>
+        )}
+
+        {/* Call for Help Button */}
+        <button
+          type="button"
+          onClick={() => {
+            if (!fromLocation) {
+              alert('Musisz ustawić punkt startowy')
+              return
+            }
+            navigate('/request-help', {
+              state: {
+                fromLocation,
+                toLocation,
+                routeDistance,
+                routeDuration
+              }
+            })
+          }}
+          disabled={!fromLocation}
+          className="w-full bg-danger-600 hover:bg-danger-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition duration-200 transform hover:scale-105 disabled:transform-none shadow-lg"
+        >
+          🚨 Wezwij pomoc
+        </button>
+      </div>
 
 
       {/* Floating Action Buttons */}

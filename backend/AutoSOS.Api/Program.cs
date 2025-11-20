@@ -81,6 +81,7 @@ app.MapAuthEndpoints();
 app.MapRequestEndpoints();
 app.MapOperatorEndpoints();
 app.MapOfferEndpoints();
+app.MapEquipmentEndpoints();
 
 app.Run();
 

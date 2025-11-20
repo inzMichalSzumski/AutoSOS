@@ -184,7 +184,7 @@ export default function UserApp() {
     if (currentRequest) {
       // Anuluj zgłoszenie w backendzie
       try {
-        await apiClient.cancelRequest(currentRequest.id)
+        await apiClient.cancelRequest(currentRequest.id, currentRequest.phoneNumber)
       } catch (error) {
         console.error('Error cancelling request:', error)
         // Kontynuuj nawet jeśli anulowanie się nie powiodło

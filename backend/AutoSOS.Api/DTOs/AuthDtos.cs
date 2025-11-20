@@ -6,7 +6,8 @@ public record RegisterOperatorDto(
     string Name,
     string Phone,
     string VehicleType,
-    int? ServiceRadiusKm
+    int? ServiceRadiusKm,
+    List<Guid> EquipmentIds // Lista ID sprzętów które operator posiada
 );
 
 public record LoginDto(

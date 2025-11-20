@@ -115,8 +115,10 @@ public class RequestNotificationService : BackgroundService
             // Sprawdź czy trzeba wysłać powiadomienia
             var operatorsToNotify = InitialNotificationCount + (expansionNumber * ExpandNotificationCount);
             
-            // Pobierz operatorów w promieniu
+            // Pobierz operatorów w promieniu z odpowiednim sprzętem
             var operators = await db.Operators
+                .Include(o => o.OperatorEquipment)
+                    .ThenInclude(oe => oe.Equipment)
                 .Where(o => o.IsAvailable && o.CurrentLatitude.HasValue && o.CurrentLongitude.HasValue)
                 .ToListAsync(cancellationToken);
 
@@ -129,9 +131,14 @@ public class RequestNotificationService : BackgroundService
                         request.FromLongitude,
                         op.CurrentLatitude!.Value,
                         op.CurrentLongitude!.Value
-                    )
+                    ),
+                    HasRequiredEquipment = request.RequiredEquipmentId.HasValue
+                        ? op.OperatorEquipment.Any(oe => oe.EquipmentId == request.RequiredEquipmentId.Value)
+                        : true // Jeśli nie wymagany konkretny sprzęt, przyjmij wszystkich
                 })
                 .Where(op => op.Distance <= (op.Operator.ServiceRadiusKm ?? 20))
+                // Filtruj na podstawie wymaganego sprzętu
+                .Where(op => op.HasRequiredEquipment)
                 .OrderBy(op => op.Distance)
                 .Take(operatorsToNotify)
                 .ToList();

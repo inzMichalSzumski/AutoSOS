@@ -13,11 +13,52 @@ public static class DatabaseInitializer
         // Apply pending migrations (Code First approach)
         await db.Database.MigrateAsync();
         
+        // Seed equipment if database is empty
+        if (!await db.Equipment.AnyAsync())
+        {
+            await SeedEquipmentAsync(db);
+        }
+        
         // Seed operators if database is empty
         if (!await db.Operators.AnyAsync())
         {
             await SeedOperatorsAsync(db);
         }
+    }
+    
+    private static async Task SeedEquipmentAsync(AutoSOSDbContext db)
+    {
+        // ========================================
+        // TODO: TYMCZASOWE - Seed data sprzętów - do usunięcia gdy będą prawdziwe dane
+        // ========================================
+        
+        var equipmentData = new[]
+        {
+            new { Name = "Jumpstarter", Description = "Do rozładowanego akumulatora - pomoc na miejscu", RequiresTransport = false },
+            new { Name = "Mobilna wulkanizacja", Description = "Do przebitych opon - naprawa na miejscu", RequiresTransport = false },
+            new { Name = "Laweta", Description = "Do transportu samochodu - wymaga transportu", RequiresTransport = true }
+        };
+        
+        foreach (var data in equipmentData)
+        {
+            var equipment = new Equipment
+            {
+                Id = Guid.NewGuid(),
+                Name = data.Name,
+                Description = data.Description,
+                RequiresTransport = data.RequiresTransport,
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            db.Equipment.Add(equipment);
+        }
+        
+        await db.SaveChangesAsync();
+        Console.WriteLine($"✅ Seeded {equipmentData.Length} equipment types to database");
+        
+        // ========================================
+        // KONIEC TYMCZASOWEGO KODU - Seed data sprzętów
+        // ========================================
     }
     
     private static async Task SeedOperatorsAsync(AutoSOSDbContext db)
@@ -66,7 +107,11 @@ public static class DatabaseInitializer
             new { Name = "Auto Serwis Otwock", Phone = "+48 518 901 234", VehicleType = "Mechanik", Lat = 52.1000, Lng = 21.2800, Available = true, Radius = 28 },
             new { Name = "Laweta Express Otwock", Phone = "+48 519 012 345", VehicleType = "Laweta", Lat = 52.1200, Lng = 21.2400, Available = true, Radius = 30 },
             new { Name = "Pomoc Drogowa Karczew", Phone = "+48 520 123 456", VehicleType = "Laweta", Lat = 52.0800, Lng = 21.2500, Available = true, Radius = 25 },
-            new { Name = "Auto Pomoc Józefów", Phone = "+48 521 234 567", VehicleType = "Mechanik", Lat = 52.1400, Lng = 21.2300, Available = true, Radius = 28 }
+            new { Name = "Auto Pomoc Józefów", Phone = "+48 521 234 567", VehicleType = "Mechanik", Lat = 52.1400, Lng = 21.2300, Available = true, Radius = 28 },
+            
+            // Janów koło Otwocka
+            new { Name = "Pomoc Drogowa Janów", Phone = "+48 522 345 678", VehicleType = "Laweta", Lat = 52.0850, Lng = 21.2650, Available = true, Radius = 30 },
+            new { Name = "Auto Serwis Janów", Phone = "+48 523 456 789", VehicleType = "Mechanik", Lat = 52.0900, Lng = 21.2600, Available = true, Radius = 25 }
         };
         
         // Create User and Operator for each entry
@@ -97,6 +142,40 @@ public static class DatabaseInitializer
                 ServiceRadiusKm = data.Radius,
                 CreatedAt = DateTime.UtcNow
             };
+            
+            // Określ dostępny sprzęt na podstawie typu pojazdu
+            var allEquipment = await db.Equipment.ToListAsync();
+            var equipmentToAssign = new List<Equipment>();
+            
+            if (data.VehicleType == "Laweta")
+            {
+                // Laweta ma wszystkie rodzaje sprzętu
+                equipmentToAssign = allEquipment.ToList();
+            }
+            else if (data.VehicleType == "Mechanik")
+            {
+                // Mechanik ma jumpstarter i mobilną wulkanizację
+                equipmentToAssign = allEquipment
+                    .Where(e => e.Name == "Jumpstarter" || e.Name == "Mobilna wulkanizacja")
+                    .ToList();
+            }
+            else if (data.VehicleType == "Elektryk samochodowy")
+            {
+                // Elektryk ma tylko jumpstarter
+                equipmentToAssign = allEquipment
+                    .Where(e => e.Name == "Jumpstarter")
+                    .ToList();
+            }
+            
+            // Przypisz sprzęt do operatora
+            foreach (var equipment in equipmentToAssign)
+            {
+                operatorEntity.OperatorEquipment.Add(new OperatorEquipment
+                {
+                    OperatorId = operatorEntity.Id,
+                    EquipmentId = equipment.Id
+                });
+            }
             
             db.Users.Add(user);
             db.Operators.Add(operatorEntity);
