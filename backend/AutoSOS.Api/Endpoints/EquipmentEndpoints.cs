@@ -11,7 +11,7 @@ public static class EquipmentEndpoints
             .WithTags("Equipment")
             .WithOpenApi();
 
-        // GET /api/equipment - Pobranie wszystkich dostępnych sprzętów
+        // GET /api/equipment - Get all available equipment types
         group.MapGet("/", async (AutoSOSDbContext db) =>
         {
             var equipment = await db.Equipment

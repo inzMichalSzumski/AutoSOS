@@ -11,7 +11,7 @@ public class Request
     public double? ToLatitude { get; set; }
     public double? ToLongitude { get; set; }
     public string? Description { get; set; }
-    public Guid? RequiredEquipmentId { get; set; } // ID sprzętu/usługi wymaganej dla tego zgłoszenia
+    public Guid? RequiredEquipmentId { get; set; } // ID of equipment/service required for this request
     public Equipment? RequiredEquipment { get; set; } // Navigation property
     public RequestStatus Status { get; set; } = RequestStatus.Pending;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

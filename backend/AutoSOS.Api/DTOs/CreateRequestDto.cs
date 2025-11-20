@@ -7,6 +7,6 @@ public record CreateRequestDto(
     double? ToLatitude,
     double? ToLongitude,
     string? Description,
-    Guid? RequiredEquipmentId // ID sprzętu/usługi wymaganej dla tego zgłoszenia
+    Guid? RequiredEquipmentId // ID of equipment/service required for this request
 );
 

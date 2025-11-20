@@ -14,7 +14,7 @@ public class Operator
     public int? ServiceRadiusKm { get; set; } = 20; // Default 20 km
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
-    // Navigation property - sprzęt który operator posiada (through OperatorEquipment)
+    // Navigation property - equipment that the operator possesses (through OperatorEquipment)
     public ICollection<OperatorEquipment> OperatorEquipment { get; set; } = new List<OperatorEquipment>();
 }
 

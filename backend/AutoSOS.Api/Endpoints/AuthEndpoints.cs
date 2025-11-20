@@ -67,7 +67,7 @@ public static class AuthEndpoints
                 CreatedAt = DateTime.UtcNow
             };
 
-            // Dodaj sprzęt do operatora
+            // Add equipment to operator
             if (dto.EquipmentIds != null && dto.EquipmentIds.Any())
             {
                 var equipment = await db.Equipment

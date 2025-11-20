@@ -3,11 +3,11 @@ namespace AutoSOS.Api.Services;
 public static class GeolocationService
 {
     /// <summary>
-    /// Oblicza odległość między dwoma punktami GPS w kilometrach (formuła Haversine)
+    /// Calculates the distance between two GPS points in kilometers (Haversine formula)
     /// </summary>
     public static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
     {
-        const double R = 6371; // Promień Ziemi w kilometrach
+        const double R = 6371; // Earth's radius in kilometers
         
         var dLat = ToRadians(lat2 - lat1);
         var dLon = ToRadians(lon2 - lon1);

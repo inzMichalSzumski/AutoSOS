@@ -15,13 +15,13 @@ public static class RequestEndpoints
             .WithTags("Requests")
             .WithOpenApi();
 
-        // POST /api/requests - Tworzenie zgłoszenia
+        // POST /api/requests - Create a new help request
         group.MapPost("/", async (
             CreateRequestDto dto,
             AutoSOSDbContext db,
             IHubContext<RequestHub> hub) =>
         {
-            // Znajdź lub utwórz User dla klienta
+            // Find or create User for the customer
             var user = await db.Users
                 .FirstOrDefaultAsync(u => u.PhoneNumber == dto.PhoneNumber && u.Role == UserRole.Customer);
 
@@ -50,14 +50,14 @@ public static class RequestEndpoints
                 ToLongitude = dto.ToLongitude,
                 Description = dto.Description,
                 RequiredEquipmentId = dto.RequiredEquipmentId,
-                Status = RequestStatus.Searching, // Zmieniamy na Searching, żeby operatorzy widzieli zgłoszenie
+                Status = RequestStatus.Searching, // Set to Searching so operators can see the request
                 CreatedAt = DateTime.UtcNow
             };
 
             db.Requests.Add(request);
             await db.SaveChangesAsync();
 
-            // Powiadom klienta przez SignalR
+            // Notify client via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("RequestCreated", new
             {
                 request.Id,
@@ -65,8 +65,8 @@ public static class RequestEndpoints
                 request.CreatedAt
             });
 
-            // Powiadomienia do operatorów będą wysyłane przez RequestNotificationService
-            // (Background Service sprawdza co 5 sekund i wysyła powiadomienia)
+            // Notifications to operators will be sent by RequestNotificationService
+            // (Background Service checks every 5 seconds and sends notifications)
 
             return Results.Created($"/api/requests/{request.Id}", new
             {
@@ -79,7 +79,7 @@ public static class RequestEndpoints
         .WithName("CreateRequest")
         .WithOpenApi();
 
-        // GET /api/requests/{id} - Pobranie zgłoszenia
+        // GET /api/requests/{id} - Get a specific request
         group.MapGet("/{id:guid}", async (Guid id, AutoSOSDbContext db) =>
         {
             var request = await db.Requests.FindAsync(id);
@@ -104,7 +104,7 @@ public static class RequestEndpoints
         .WithName("GetRequest")
         .WithOpenApi();
 
-        // PUT /api/requests/{id}/cancel - Anulowanie zgłoszenia
+        // PUT /api/requests/{id}/cancel - Cancel a request
         group.MapPut("/{id:guid}/cancel", async (
             Guid id,
             CancelRequestDto dto,
@@ -122,7 +122,7 @@ public static class RequestEndpoints
                 return Results.Forbid();
             }
 
-            // Można anulować tylko zgłoszenia w statusie Searching lub Pending
+            // Can only cancel requests in Searching or Pending status
             if (request.Status != RequestStatus.Searching && request.Status != RequestStatus.Pending)
             {
                 return Results.BadRequest(new { error = "Cannot cancel request in current status" });
@@ -132,7 +132,7 @@ public static class RequestEndpoints
             request.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
-            // Powiadom klienta przez SignalR
+            // Notify client via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("RequestCancelled", new
             {
                 request.Id,
@@ -150,7 +150,7 @@ public static class RequestEndpoints
         .WithName("CancelRequest")
         .WithOpenApi();
 
-        // GET /api/requests/available - Pobranie dostępnych zgłoszeń dla operatorów
+        // GET /api/requests/available - Get available requests for operators
         group.MapGet("/available", async (
             AutoSOSDbContext db,
             HttpContext context) =>
@@ -174,7 +174,7 @@ public static class RequestEndpoints
                 return Results.Ok(new { requests = Array.Empty<object>() });
             }
             
-            // Pobierz ID sprzętów które operator posiada
+            // Get equipment IDs that the operator possesses
             var operatorEquipmentIds = operatorEntity.OperatorEquipment
                 .Select(oe => oe.EquipmentId)
                 .ToList();
@@ -208,10 +208,10 @@ public static class RequestEndpoints
                     ),
                     HasRequiredEquipment = r.RequiredEquipmentId.HasValue
                         ? operatorEquipmentIds.Contains(r.RequiredEquipmentId.Value)
-                        : true // Jeśli nie wymagany konkretny sprzęt, przyjmij wszystkich
+                        : true // If no specific equipment required, accept all operators
                 })
                 .Where(r => r.Distance <= (operatorEntity.ServiceRadiusKm ?? 20))
-                // Filtruj na podstawie wymaganego sprzętu
+                // Filter based on required equipment
                 .Where(r => r.HasRequiredEquipment)
                 .OrderBy(r => r.Distance)
                 .Select(r => new

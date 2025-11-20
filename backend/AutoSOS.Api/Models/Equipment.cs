@@ -3,13 +3,13 @@ namespace AutoSOS.Api.Models;
 public class Equipment
 {
     public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty; // np. "Jumpstarter", "Mobilna wulkanizacja", "Laweta"
-    public string Description { get; set; } = string.Empty; // Opis sprzętu/usługi
-    public bool RequiresTransport { get; set; } = false; // Czy ten sprzęt wymaga transportu samochodu (true dla lawety)
+    public string Name { get; set; } = string.Empty; // e.g. "Jumpstarter", "Mobile tire service", "Tow truck"
+    public string Description { get; set; } = string.Empty; // Description of equipment/service
+    public bool RequiresTransport { get; set; } = false; // Whether this equipment requires vehicle transport (true for tow truck)
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
-// Tabela pośrednicząca dla relacji many-to-many
+// Junction table for many-to-many relationship
 public class OperatorEquipment
 {
     public Guid OperatorId { get; set; }

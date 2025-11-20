@@ -11,18 +11,18 @@ public class RequestNotificationService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<RequestNotificationService> _logger;
-    private const int InitialNotificationCount = 15; // Najbliższych 15 operatorów
-    private const int ExpandNotificationCount = 10; // Kolejnych 10 przy rozszerzeniu
-    private const int NotificationTimeoutSeconds = 30; // 30 sekund na odpowiedź
-    private const int MaxExpansions = 3; // Maksymalnie 3 rozszerzenia (15 + 10 + 10 + 10 = 45 operatorów)
+    private const int InitialNotificationCount = 15; // Nearest 15 operators
+    private const int ExpandNotificationCount = 10; // Additional 10 on expansion
+    private const int NotificationTimeoutSeconds = 30; // 30 seconds for response
+    private const int MaxExpansions = 3; // Maximum 3 expansions (15 + 10 + 10 + 10 = 45 operators)
     
     // ========================================
-    // TODO: TYMCZASOWE - Mock oferty - do usunięcia gdy będą prawdziwi operatorzy
+    // TODO: TEMPORARY - Mock offers - to be removed when real operators are available
     // ========================================
-    private const int MockOfferDelaySeconds = 10; // Po 10 sekundach utwórz mock ofertę (symulacja odpowiedzi operatora)
-    private const double MockOfferProbability = 0.3; // 30% szansy na mock ofertę od operatora
+    private const int MockOfferDelaySeconds = 10; // After 10 seconds create mock offer (simulates operator response)
+    private const double MockOfferProbability = 0.3; // 30% chance for mock offer from operator
     // ========================================
-    // KONIEC TYMCZASOWEGO KODU - Mock oferty
+    // END OF TEMPORARY CODE - Mock offers
     // ========================================
 
     public RequestNotificationService(
@@ -40,7 +40,7 @@ public class RequestNotificationService : BackgroundService
             try
             {
                 await ProcessPendingRequestsAsync(stoppingToken);
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken); // Sprawdzaj co 5 sekund
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken); // Check every 5 seconds
             }
             catch (Exception ex)
             {
@@ -56,7 +56,7 @@ public class RequestNotificationService : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<AutoSOSDbContext>();
         var hub = scope.ServiceProvider.GetRequiredService<IHubContext<RequestHub>>();
 
-        // Znajdź zgłoszenia, które są w stanie Searching i nie mają jeszcze ofert
+        // Find requests that are in Searching status and don't have offers yet
         var activeRequests = await db.Requests
             .Where(r => r.Status == RequestStatus.Searching)
             .ToListAsync(cancellationToken);
@@ -66,42 +66,42 @@ public class RequestNotificationService : BackgroundService
             var timeSinceCreation = DateTime.UtcNow - request.CreatedAt;
             var secondsSinceCreation = (int)timeSinceCreation.TotalSeconds;
 
-            // Sprawdź czy zgłoszenie ma już ofertę
+            // Check if request already has an offer
             var hasOffer = await db.Offers.AnyAsync(o => o.RequestId == request.Id && o.Status == OfferStatus.Proposed, cancellationToken);
             
             // ========================================
-            // TODO: TYMCZASOWE - Mock oferty - do usunięcia gdy będą prawdziwi operatorzy
+            // TODO: TEMPORARY - Mock offers - to be removed when real operators are available
             // ========================================
-            // Mock: Utwórz automatyczną ofertę po określonym czasie (symulacja odpowiedzi operatora)
+            // Mock: Create automatic offer after specified time (simulates operator response)
             if (!hasOffer && secondsSinceCreation >= MockOfferDelaySeconds)
             {
                 var random = new Random();
                 if (random.NextDouble() < MockOfferProbability)
                 {
                     await CreateMockOfferAsync(db, hub, request, cancellationToken);
-                    continue; // Mamy ofertę, nie rozszerzaj powiadomień
+                    continue; // We have an offer, don't expand notifications
                 }
             }
             // ========================================
-            // KONIEC TYMCZASOWEGO KODU - Mock oferty
+            // END OF TEMPORARY CODE - Mock offers
             // ========================================
             
             if (hasOffer)
             {
-                // Zgłoszenie ma ofertę, nie rozszerzaj powiadomień
+                // Request has an offer, don't expand notifications
                 continue;
             }
 
-            // Oblicz ile rozszerzeń już było (na podstawie czasu)
+            // Calculate how many expansions have already occurred (based on time)
             var expansionNumber = secondsSinceCreation / NotificationTimeoutSeconds;
 
             if (expansionNumber > MaxExpansions)
             {
-                // Timeout - brak możliwości wezwania pomocy
+                // Timeout - no help available
                 request.Status = RequestStatus.Cancelled;
                 await db.SaveChangesAsync(cancellationToken);
 
-                // Powiadom klienta o timeout
+                // Notify client about timeout
                 await hub.Clients.Group($"request-{request.Id}").SendAsync("RequestTimeout", new
                 {
                     request.Id,
@@ -112,10 +112,10 @@ public class RequestNotificationService : BackgroundService
                 continue;
             }
 
-            // Sprawdź czy trzeba wysłać powiadomienia
+            // Check if notifications need to be sent
             var operatorsToNotify = InitialNotificationCount + (expansionNumber * ExpandNotificationCount);
             
-            // Pobierz operatorów w promieniu z odpowiednim sprzętem
+            // Get operators within radius with appropriate equipment
             var operators = await db.Operators
                 .Include(o => o.OperatorEquipment)
                     .ThenInclude(oe => oe.Equipment)
@@ -134,16 +134,16 @@ public class RequestNotificationService : BackgroundService
                     ),
                     HasRequiredEquipment = request.RequiredEquipmentId.HasValue
                         ? op.OperatorEquipment.Any(oe => oe.EquipmentId == request.RequiredEquipmentId.Value)
-                        : true // Jeśli nie wymagany konkretny sprzęt, przyjmij wszystkich
+                        : true // If no specific equipment required, accept all operators
                 })
                 .Where(op => op.Distance <= (op.Operator.ServiceRadiusKm ?? 20))
-                // Filtruj na podstawie wymaganego sprzętu
+                // Filter based on required equipment
                 .Where(op => op.HasRequiredEquipment)
                 .OrderBy(op => op.Distance)
                 .Take(operatorsToNotify)
                 .ToList();
 
-            // Wyślij powiadomienia do operatorów (tylko jeśli to pierwsze powiadomienie lub rozszerzenie)
+            // Send notifications to operators (only if this is the first notification or expansion)
             if (expansionNumber == 0 || secondsSinceCreation % NotificationTimeoutSeconds < 5)
             {
                 var notificationData = new
@@ -156,7 +156,7 @@ public class RequestNotificationService : BackgroundService
                     request.ToLongitude,
                     request.Description,
                     request.CreatedAt,
-                    Distance = 0.0 // Będzie obliczone dla każdego operatora
+                    Distance = 0.0 // Will be calculated for each operator
                 };
 
                 foreach (var op in operatorsWithDistance)
@@ -174,7 +174,7 @@ public class RequestNotificationService : BackgroundService
                         Distance = Math.Round(op.Distance, 1)
                     };
 
-                    // Wyślij powiadomienie do konkretnego operatora
+                    // Send notification to specific operator
                     await hub.Clients.Group($"operator-{op.Operator.Id}").SendAsync("NewRequest", operatorNotification);
                 }
 
@@ -184,7 +184,7 @@ public class RequestNotificationService : BackgroundService
     }
 
     // ========================================
-    // TODO: TYMCZASOWE - Mock oferty - do usunięcia gdy będą prawdziwi operatorzy
+    // TODO: TEMPORARY - Mock offers - to be removed when real operators are available
     // ========================================
     private async Task CreateMockOfferAsync(
         AutoSOSDbContext db,
@@ -194,7 +194,7 @@ public class RequestNotificationService : BackgroundService
     {
         try
         {
-            // Znajdź najbliższego dostępnego operatora
+            // Find nearest available operator
             var operators = await db.Operators
                 .Where(o => o.IsAvailable && o.CurrentLatitude.HasValue && o.CurrentLongitude.HasValue)
                 .ToListAsync(cancellationToken);
@@ -229,9 +229,9 @@ public class RequestNotificationService : BackgroundService
             var operator_ = operatorsWithDistance.Operator;
             var random = new Random();
             
-            // Losowa cena między 100 a 300 zł
+            // Random price between 100 and 300 PLN
             var price = (decimal)(100 + random.NextDouble() * 200);
-            // Losowy czas między 15 a 45 minut
+            // Random time between 15 and 45 minutes
             var estimatedTime = 15 + random.Next(30);
 
             var offer = new Offer
@@ -251,7 +251,7 @@ public class RequestNotificationService : BackgroundService
 
             await db.SaveChangesAsync(cancellationToken);
 
-            // Powiadom klienta przez SignalR
+            // Notify client via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("OfferReceived", new
             {
                 offer.Id,
@@ -268,7 +268,7 @@ public class RequestNotificationService : BackgroundService
         }
     }
     // ========================================
-    // KONIEC TYMCZASOWEGO KODU - Mock oferty
+    // END OF TEMPORARY CODE - Mock offers
     // ========================================
 }
 

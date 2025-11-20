@@ -16,7 +16,7 @@ public class RequestHub : Hub
 
     public async Task JoinOperatorGroup(string operatorId)
     {
-        // Operatorzy dołączają do swojej grupy, żeby otrzymywać powiadomienia
+        // Operators join their group to receive notifications
         await Groups.AddToGroupAsync(Context.ConnectionId, $"operator-{operatorId}");
     }
 
