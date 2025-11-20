@@ -23,6 +23,8 @@ export interface OperatorResponse {
   phone: string;
   vehicleType: string;
   distance: number;
+  currentLatitude?: number;
+  currentLongitude?: number;
 }
 
 export interface OperatorsResponse {
@@ -90,6 +92,12 @@ class ApiClient {
 
   async getRequest(id: string): Promise<any> {
     return this.request(`/api/requests/${id}`);
+  }
+
+  async cancelRequest(id: string): Promise<{ id: string; status: string; message: string }> {
+    return this.request<{ id: string; status: string; message: string }>(`/api/requests/${id}/cancel`, {
+      method: 'PUT',
+    });
   }
 
   async getAvailableRequests(): Promise<{ requests: any[] }> {

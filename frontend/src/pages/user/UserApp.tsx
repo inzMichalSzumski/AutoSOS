@@ -179,9 +179,17 @@ export default function UserApp() {
     setSelectedOperator(null)
   }
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     // Zachowaj lokalizacje z obecnego zgłoszenia i wróć do mapy
     if (currentRequest) {
+      // Anuluj zgłoszenie w backendzie
+      try {
+        await apiClient.cancelRequest(currentRequest.id)
+      } catch (error) {
+        console.error('Error cancelling request:', error)
+        // Kontynuuj nawet jeśli anulowanie się nie powiodło
+      }
+      
       // Rozłącz SignalR
       if (connectionRef.current) {
         connectionRef.current.off('OfferReceived')

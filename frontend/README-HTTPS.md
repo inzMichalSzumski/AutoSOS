@@ -1,34 +1,33 @@
-# HTTPS dla Developmentu
+# HTTPS for Development
 
-Aplikacja używa HTTPS w trybie deweloperskim, aby geolokalizacja działała na telefonie.
+The application uses HTTPS in development mode so geolocation works on mobile devices.
 
-## Jak to działa
+## How it works
 
-1. Vite automatycznie generuje self-signed certificate
-2. Przy pierwszym uruchomieniu przeglądarka pokaże ostrzeżenie o niezaufanym certyfikacie
-3. Musisz zaakceptować certyfikat (kliknij "Zaawansowane" → "Przejdź do strony")
+1. Vite automatically generates a self-signed certificate
+2. On first run, the browser will show a warning about an untrusted certificate
+3. You must accept the certificate (click "Advanced" → "Proceed to site")
 
-## Uruchomienie
+## Running
 
 ```bash
 npm run dev
 ```
 
-Serwer będzie dostępny pod adresem `https://localhost:5173` (lub inny port jeśli 5173 jest zajęty).
+The server will be available at `https://localhost:5173` (or another port if 5173 is taken).
 
-## Dostęp z telefonu
+## Access from phone
 
-1. Upewnij się, że komputer i telefon są w tej samej sieci WiFi
-2. Znajdź IP komputera:
-   - Windows: `ipconfig` → szukaj "IPv4 Address"
-   - Mac/Linux: `ifconfig` lub `ip addr`
-3. Na telefonie otwórz: `https://[IP-KOMPUTERA]:5173`
-   - Np. `https://192.168.1.100:5173`
-4. Zaakceptuj ostrzeżenie o certyfikacie (self-signed)
+1. Make sure the computer and phone are on the same WiFi network
+2. Find the computer's IP:
+   - Windows: `ipconfig` → look for "IPv4 Address"
+   - Mac/Linux: `ifconfig` or `ip addr`
+3. On your phone, open: `https://[COMPUTER-IP]:5173`
+   - E.g. `https://192.168.1.100:5173`
+4. Accept the certificate warning (self-signed)
 
-## Uwaga
+## Notes
 
-- Self-signed certificate może wymagać akceptacji w przeglądarce
-- Niektóre przeglądarki mogą blokować self-signed certificates - wtedy użyj Chrome lub Firefox
-- Na produkcji użyj prawidłowego certyfikatu SSL (Let's Encrypt, etc.)
-
+- Self-signed certificate may require acceptance in the browser
+- Some browsers may block self-signed certificates - then use Chrome or Firefox
+- In production, use a proper SSL certificate (Let's Encrypt, etc.)

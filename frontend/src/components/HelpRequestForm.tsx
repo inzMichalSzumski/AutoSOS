@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap, ZoomControl, Pol
 import { Icon, DivIcon } from 'leaflet'
 import type { HelpRequest, Location } from '../types'
 import { searchAddresses, searchPOI, reverseGeocode, calculateDistance, getRoute, type GeocodingResult, type POIResult, type RoutePoint } from '../services/geocoding'
+import { apiClient, type OperatorResponse } from '../services/api'
 
 // Fix dla ikon Leaflet w Vite
 import 'leaflet/dist/leaflet.css'
@@ -40,6 +41,14 @@ const POIIcon = new Icon({
   iconAnchor: [10, 32],
 })
 
+// Ikonka lawety dla operatorów
+const TowTruckIcon = new DivIcon({
+  html: '<div style="font-size: 28px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🚛</div>',
+  className: 'tow-truck-icon',
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+})
+
 interface HelpRequestFormProps {
   onSubmit: (request: HelpRequest) => void
   initialFromLocation?: Location | null
@@ -52,13 +61,15 @@ function MapCenterTracker({
   toPosition,
   onFromPositionChange,
   isSelectingStart,
-  routeCoordinates
+  routeCoordinates,
+  nearbyOperators
 }: { 
   fromPosition: Location | null
   toPosition: Location | null
   onFromPositionChange: (loc: Location) => void
   isSelectingStart: boolean
   routeCoordinates: RoutePoint[]
+  nearbyOperators: OperatorResponse[]
 }) {
   const map = useMap()
   
@@ -108,6 +119,16 @@ function MapCenterTracker({
           dashArray="5, 5"
         />
       )}
+      {/* Markery operatorów - pokazuj tylko gdy nie wybieramy lokalizacji */}
+      {!isSelectingStart && nearbyOperators.map((operator) => (
+        operator.currentLatitude && operator.currentLongitude && (
+          <Marker
+            key={operator.id}
+            position={[operator.currentLatitude, operator.currentLongitude]}
+            icon={TowTruckIcon}
+          />
+        )
+      ))}
     </>
   )
 }
@@ -135,8 +156,9 @@ function MapBounds({ fromLocation, toLocation }: { fromLocation: Location | null
       // Top padding większy aby pasek wyszukiwarki nie zasłaniał mety
       // Umiarkowane powiększenie (pomiędzy poprzednim a obecnym)
       map.fitBounds(bounds, { 
-        padding: [100, 50, 50, 50] // [top, right, bottom, left]
-      })
+        paddingTopLeft: [50, 100],
+        paddingBottomRight: [50, 50]
+      } as L.FitBoundsOptions)
       
       // Lekko zmniejsz zoom (około 15% - pomiędzy poprzednim a obecnym)
       setTimeout(() => {
@@ -175,9 +197,10 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   const [routeDistance, setRouteDistance] = useState<number | null>(null) // Dystans między punktami
   const [routeCoordinates, setRouteCoordinates] = useState<RoutePoint[]>([]) // Współrzędne trasy
   const [routeDuration, setRouteDuration] = useState<number | null>(null) // Czas trasy w sekundach
+  const [nearbyOperators, setNearbyOperators] = useState<OperatorResponse[]>([]) // Najbliżsi operatorzy
   
   const searchInputRef = useRef<HTMLInputElement>(null)
-  const searchTimeoutRef = useRef<NodeJS.Timeout>()
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
 
   // Ustaw początkową lokalizację i centrum mapy jeśli są przekazane
   useEffect(() => {
@@ -224,6 +247,29 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
       return () => clearTimeout(timer)
     }
   }, [fromLocation, locationError])
+
+  // Pobierz najbliższych operatorów gdy użytkownik ma ustaloną lokalizację
+  useEffect(() => {
+    const loadNearbyOperators = async () => {
+      if (fromLocation && !isSelectingStart) {
+        try {
+          const response = await apiClient.getOperators(fromLocation.lat, fromLocation.lng, 30)
+          // Pobierz tylko 10 najbliższych operatorów z lokalizacją
+          const operatorsWithLocation = response.operators
+            .filter(op => op.currentLatitude && op.currentLongitude)
+            .slice(0, 10)
+          setNearbyOperators(operatorsWithLocation)
+        } catch (error) {
+          console.error('Error loading nearby operators:', error)
+          // Nie pokazuj błędu użytkownikowi - to tylko informacyjne markery
+        }
+      } else {
+        setNearbyOperators([])
+      }
+    }
+
+    loadNearbyOperators()
+  }, [fromLocation, isSelectingStart])
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -469,6 +515,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
             onFromPositionChange={setFromLocation}
             isSelectingStart={isSelectingStart || !fromLocation}
             routeCoordinates={routeCoordinates}
+            nearbyOperators={nearbyOperators}
           />
           {/* Fit bounds when destination is confirmed */}
           {destinationConfirmed && fromLocation && toLocation && (

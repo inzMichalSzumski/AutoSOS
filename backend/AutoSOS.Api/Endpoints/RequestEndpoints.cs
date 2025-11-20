@@ -103,6 +103,45 @@ public static class RequestEndpoints
         .WithName("GetRequest")
         .WithOpenApi();
 
+        // PUT /api/requests/{id}/cancel - Anulowanie zgłoszenia
+        group.MapPut("/{id:guid}/cancel", async (
+            Guid id,
+            AutoSOSDbContext db,
+            IHubContext<RequestHub> hub) =>
+        {
+            var request = await db.Requests.FindAsync(id);
+            
+            if (request == null)
+                return Results.NotFound(new { error = "Request not found" });
+
+            // Można anulować tylko zgłoszenia w statusie Searching lub Pending
+            if (request.Status != RequestStatus.Searching && request.Status != RequestStatus.Pending)
+            {
+                return Results.BadRequest(new { error = "Cannot cancel request in current status" });
+            }
+
+            request.Status = RequestStatus.Cancelled;
+            request.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+
+            // Powiadom klienta przez SignalR
+            await hub.Clients.Group($"request-{request.Id}").SendAsync("RequestCancelled", new
+            {
+                request.Id,
+                request.Status,
+                message = "Request has been cancelled"
+            });
+
+            return Results.Ok(new
+            {
+                request.Id,
+                request.Status,
+                message = "Request cancelled successfully"
+            });
+        })
+        .WithName("CancelRequest")
+        .WithOpenApi();
+
         // GET /api/requests/available - Pobranie dostępnych zgłoszeń dla operatorów
         group.MapGet("/available", async (
             AutoSOSDbContext db,
