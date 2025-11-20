@@ -15,6 +15,19 @@ module.exports = {
       { allowConstantExport: true },
     ],
     '@typescript-eslint/no-explicit-any': 'off',
+    // Note: ESLint doesn't have a direct rule for comment language
+    // Code reviews should verify all comments are in English
+    'spaced-comment': ['warn', 'always', {
+      'line': {
+        'markers': ['/'],
+        'exceptions': ['-', '+']
+      },
+      'block': {
+        'markers': ['!'],
+        'exceptions': ['*'],
+        'balanced': true
+      }
+    }],
   },
 }
 

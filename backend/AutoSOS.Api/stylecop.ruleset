@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="StyleCop Rules" Description="StyleCop Analyzer Rules" ToolsVersion="17.0">
+  <Rules AnalyzerId="StyleCop.Analyzers" RuleNamespace="StyleCop.Analyzers">
+    <!-- Note: StyleCop doesn't have a built-in rule for comment language,
+         but we can use SA1600 (ElementsMustBeDocumented) to encourage documentation
+         and manually enforce English in code reviews -->
+    <Rule Id="SA1600" Action="None" />
+    <Rule Id="SA1601" Action="Warning" />
+    <Rule Id="SA1602" Action="Warning" />
+    <Rule Id="SA1604" Action="Warning" />
+    <Rule Id="SA1605" Action="Warning" />
+    <Rule Id="SA1606" Action="Warning" />
+    <Rule Id="SA1607" Action="Warning" />
+    <Rule Id="SA1608" Action="Warning" />
+    <Rule Id="SA1609" Action="Warning" />
+    <Rule Id="SA1610" Action="Warning" />
+    <Rule Id="SA1611" Action="Warning" />
+    <Rule Id="SA1612" Action="Warning" />
+    <Rule Id="SA1613" Action="Warning" />
+    <Rule Id="SA1614" Action="Warning" />
+    <Rule Id="SA1615" Action="Warning" />
+    <Rule Id="SA1616" Action="Warning" />
+    <Rule Id="SA1617" Action="Warning" />
+    <Rule Id="SA1618" Action="Warning" />
+    <Rule Id="SA1619" Action="Warning" />
+    <Rule Id="SA1620" Action="Warning" />
+    <Rule Id="SA1621" Action="Warning" />
+    <Rule Id="SA1622" Action="Warning" />
+    <Rule Id="SA1623" Action="Warning" />
+    <Rule Id="SA1624" Action="Warning" />
+    <Rule Id="SA1625" Action="Warning" />
+    <Rule Id="SA1626" Action="Warning" />
+    <Rule Id="SA1627" Action="Warning" />
+    <Rule Id="SA1628" Action="Warning" />
+    <Rule Id="SA1629" Action="Warning" />
+    <Rule Id="SA1630" Action="Warning" />
+    <Rule Id="SA1631" Action="Warning" />
+    <Rule Id="SA1632" Action="Warning" />
+    <Rule Id="SA1633" Action="Warning" />
+    <Rule Id="SA1634" Action="Warning" />
+    <Rule Id="SA1635" Action="Warning" />
+    <Rule Id="SA1636" Action="Warning" />
+    <Rule Id="SA1637" Action="Warning" />
+    <Rule Id="SA1638" Action="Warning" />
+    <Rule Id="SA1639" Action="Warning" />
+    <Rule Id="SA1640" Action="Warning" />
+    <Rule Id="SA1641" Action="Warning" />
+    <Rule Id="SA1642" Action="Warning" />
+    <Rule Id="SA1643" Action="Warning" />
+    <Rule Id="SA1648" Action="Warning" />
+    <Rule Id="SA1649" Action="Warning" />
+    <Rule Id="SA1651" Action="Warning" />
+  </Rules>
+</RuleSet>
+
