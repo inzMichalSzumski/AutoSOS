@@ -176,7 +176,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string |
 /**
  * Calculate distance between two points in kilometers (Haversine formula)
  */
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371 // Earth's radius in km
   const dLat = toRad(lat2 - lat1)
   const dLon = toRad(lon2 - lon1)

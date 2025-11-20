@@ -110,18 +110,6 @@ export default function UserApp() {
     return (
       <div className="relative w-full h-screen overflow-hidden">
         <HelpRequestForm onSubmit={handleRequestSubmit} />
-        
-        {/* Operator Panel Button - Top Right */}
-        <div className="absolute top-4 right-4 z-10">
-          <Link
-            to="/operator/login"
-            className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-xl transition-colors"
-          >
-            <span>👔</span>
-            <span className="hidden sm:inline">Jesteś operatorem?</span>
-            <span className="sm:hidden">Operator</span>
-          </Link>
-        </div>
       </div>
     )
   }

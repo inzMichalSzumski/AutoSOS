@@ -23,3 +23,9 @@ body {
   width: 100%;
 }
 
+/* Ensure zoom controls are visible and not overlapped */
+.leaflet-top.leaflet-right {
+  margin-top: 80px !important;
+  margin-right: 10px !important;
+}
+
