@@ -108,30 +108,19 @@ export default function UserApp() {
 
   if (!currentRequest) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        {/* Header with button to operator panel */}
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-end">
-            <Link
-              to="/operator/login"
-              className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-md transition-colors"
-            >
-              <span>👔</span>
-              <span>Jesteś operatorem?</span>
-            </Link>
-          </div>
-        </div>
-
-        <div className="container mx-auto px-4 py-4 max-w-2xl">
-          <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold text-gray-900 mb-2">
-              🚗 AutoSOS
-            </h1>
-            <p className="text-xl text-gray-600">
-              Szybka pomoc drogowa zawsze pod ręką
-            </p>
-          </div>
-          <HelpRequestForm onSubmit={handleRequestSubmit} />
+      <div className="relative w-full h-screen overflow-hidden">
+        <HelpRequestForm onSubmit={handleRequestSubmit} />
+        
+        {/* Operator Panel Button - Top Right */}
+        <div className="absolute top-4 right-4 z-10">
+          <Link
+            to="/operator/login"
+            className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg shadow-xl transition-colors"
+          >
+            <span>👔</span>
+            <span className="hidden sm:inline">Jesteś operatorem?</span>
+            <span className="sm:hidden">Operator</span>
+          </Link>
         </div>
       </div>
     )
