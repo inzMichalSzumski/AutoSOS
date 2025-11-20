@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import HelpRequestForm from '../../components/HelpRequestForm'
 import OperatorList from '../../components/OperatorList'
 import RequestStatus from '../../components/RequestStatus'
 import { apiClient } from '../../services/api'
 import { signalRService } from '../../services/signalr'
 import * as signalR from '@microsoft/signalr'
-import type { HelpRequest, Operator, RequestStatusType } from '../../types'
+import type { HelpRequest, Operator, RequestStatusType, Location } from '../../types'
 
 export default function UserApp() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [currentRequest, setCurrentRequest] = useState<HelpRequest | null>(null)
   const [availableOperators, setAvailableOperators] = useState<Operator[]>([])
   const [requestStatus, setRequestStatus] = useState<RequestStatusType>('draft')
@@ -178,6 +179,41 @@ export default function UserApp() {
     setSelectedOperator(null)
   }
 
+  const handleRetry = () => {
+    // Zachowaj lokalizacje z obecnego zgłoszenia i wróć do mapy
+    if (currentRequest) {
+      // Rozłącz SignalR
+      if (connectionRef.current) {
+        connectionRef.current.off('OfferReceived')
+        connectionRef.current.off('RequestTimeout')
+        signalRService.disconnect()
+        connectionRef.current = null
+      }
+      
+      // Reset stanu, ale zachowaj lokalizacje
+      const savedFromLocation = currentRequest.fromLocation
+      const savedToLocation = currentRequest.toLocation || null
+      
+      setCurrentRequest(null)
+      setAvailableOperators([])
+      setRequestStatus('draft')
+      setSelectedOperator(null)
+      
+      // Przekieruj do głównej strony z zachowanymi lokalizacjami
+      // Lokalizacje będą przekazane przez state i użyte w HelpRequestForm
+      navigate('/', {
+        state: {
+          fromLocation: savedFromLocation,
+          toLocation: savedToLocation
+        },
+        replace: true
+      })
+    } else {
+      // Jeśli nie ma zgłoszenia, po prostu wróć do mapy
+      handleNewRequest()
+    }
+  }
+
   // Cleanup SignalR przy unmount
   useEffect(() => {
     return () => {
@@ -190,9 +226,16 @@ export default function UserApp() {
   }, [])
 
   if (!currentRequest) {
+    // Sprawdź czy przyszliśmy z handleRetry z zachowanymi lokalizacjami
+    const retryState = location.state as { fromLocation?: Location; toLocation?: Location } | null
+    
     return (
       <div className="relative w-full h-screen overflow-hidden">
-        <HelpRequestForm onSubmit={handleRequestSubmit} />
+        <HelpRequestForm 
+          onSubmit={handleRequestSubmit}
+          initialFromLocation={retryState?.fromLocation || null}
+          initialToLocation={retryState?.toLocation || null}
+        />
       </div>
     )
   }
@@ -207,6 +250,7 @@ export default function UserApp() {
             onSelect={handleOperatorSelect}
             selectedOperator={selectedOperator}
             onAccept={handleAcceptOffer}
+            onRetry={handleRetry}
             status={requestStatus}
           />
         </div>

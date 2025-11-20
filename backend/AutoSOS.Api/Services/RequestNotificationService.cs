@@ -15,6 +15,15 @@ public class RequestNotificationService : BackgroundService
     private const int ExpandNotificationCount = 10; // Kolejnych 10 przy rozszerzeniu
     private const int NotificationTimeoutSeconds = 30; // 30 sekund na odpowiedź
     private const int MaxExpansions = 3; // Maksymalnie 3 rozszerzenia (15 + 10 + 10 + 10 = 45 operatorów)
+    
+    // ========================================
+    // TODO: TYMCZASOWE - Mock oferty - do usunięcia gdy będą prawdziwi operatorzy
+    // ========================================
+    private const int MockOfferDelaySeconds = 10; // Po 10 sekundach utwórz mock ofertę (symulacja odpowiedzi operatora)
+    private const double MockOfferProbability = 0.3; // 30% szansy na mock ofertę od operatora
+    // ========================================
+    // KONIEC TYMCZASOWEGO KODU - Mock oferty
+    // ========================================
 
     public RequestNotificationService(
         IServiceProvider serviceProvider,
@@ -59,6 +68,23 @@ public class RequestNotificationService : BackgroundService
 
             // Sprawdź czy zgłoszenie ma już ofertę
             var hasOffer = await db.Offers.AnyAsync(o => o.RequestId == request.Id && o.Status == OfferStatus.Proposed, cancellationToken);
+            
+            // ========================================
+            // TODO: TYMCZASOWE - Mock oferty - do usunięcia gdy będą prawdziwi operatorzy
+            // ========================================
+            // Mock: Utwórz automatyczną ofertę po określonym czasie (symulacja odpowiedzi operatora)
+            if (!hasOffer && secondsSinceCreation >= MockOfferDelaySeconds)
+            {
+                var random = new Random();
+                if (random.NextDouble() < MockOfferProbability)
+                {
+                    await CreateMockOfferAsync(db, hub, request, cancellationToken);
+                    continue; // Mamy ofertę, nie rozszerzaj powiadomień
+                }
+            }
+            // ========================================
+            // KONIEC TYMCZASOWEGO KODU - Mock oferty
+            // ========================================
             
             if (hasOffer)
             {
@@ -149,5 +175,93 @@ public class RequestNotificationService : BackgroundService
             }
         }
     }
+
+    // ========================================
+    // TODO: TYMCZASOWE - Mock oferty - do usunięcia gdy będą prawdziwi operatorzy
+    // ========================================
+    private async Task CreateMockOfferAsync(
+        AutoSOSDbContext db,
+        IHubContext<RequestHub> hub,
+        Request request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Znajdź najbliższego dostępnego operatora
+            var operators = await db.Operators
+                .Where(o => o.IsAvailable && o.CurrentLatitude.HasValue && o.CurrentLongitude.HasValue)
+                .ToListAsync(cancellationToken);
+
+            if (!operators.Any())
+            {
+                _logger.LogWarning($"No available operators for mock offer on request {request.Id}");
+                return;
+            }
+
+            var operatorsWithDistance = operators
+                .Select(op => new
+                {
+                    Operator = op,
+                    Distance = GeolocationService.CalculateDistance(
+                        request.FromLatitude,
+                        request.FromLongitude,
+                        op.CurrentLatitude!.Value,
+                        op.CurrentLongitude!.Value
+                    )
+                })
+                .Where(op => op.Distance <= (op.Operator.ServiceRadiusKm ?? 20))
+                .OrderBy(op => op.Distance)
+                .FirstOrDefault();
+
+            if (operatorsWithDistance == null)
+            {
+                _logger.LogWarning($"No operators in range for mock offer on request {request.Id}");
+                return;
+            }
+
+            var operator_ = operatorsWithDistance.Operator;
+            var random = new Random();
+            
+            // Losowa cena między 100 a 300 zł
+            var price = (decimal)(100 + random.NextDouble() * 200);
+            // Losowy czas między 15 a 45 minut
+            var estimatedTime = 15 + random.Next(30);
+
+            var offer = new Offer
+            {
+                Id = Guid.NewGuid(),
+                RequestId = request.Id,
+                OperatorId = operator_.Id,
+                Price = Math.Round(price, 2),
+                EstimatedTimeMinutes = estimatedTime,
+                Status = OfferStatus.Proposed,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            db.Offers.Add(offer);
+            request.Status = RequestStatus.OfferReceived;
+            request.UpdatedAt = DateTime.UtcNow;
+
+            await db.SaveChangesAsync(cancellationToken);
+
+            // Powiadom klienta przez SignalR
+            await hub.Clients.Group($"request-{request.Id}").SendAsync("OfferReceived", new
+            {
+                offer.Id,
+                offer.Price,
+                offer.EstimatedTimeMinutes,
+                OperatorName = operator_.Name
+            });
+
+            _logger.LogInformation($"Created mock offer for request {request.Id} from operator {operator_.Name}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error creating mock offer for request {request.Id}");
+        }
+    }
+    // ========================================
+    // KONIEC TYMCZASOWEGO KODU - Mock oferty
+    // ========================================
 }
 

@@ -42,6 +42,8 @@ const POIIcon = new Icon({
 
 interface HelpRequestFormProps {
   onSubmit: (request: HelpRequest) => void
+  initialFromLocation?: Location | null
+  initialToLocation?: Location | null
 }
 
 // Component to track map center and update location
@@ -148,14 +150,16 @@ function MapBounds({ fromLocation, toLocation }: { fromLocation: Location | null
   return null
 }
 
-export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
+export default function HelpRequestForm({ onSubmit, initialFromLocation, initialToLocation }: HelpRequestFormProps) {
   const navigate = useNavigate()
   const [phoneNumber, setPhoneNumber] = useState('')
   const [description, setDescription] = useState('')
-  const [fromLocation, setFromLocation] = useState<Location | null>(null)
-  const [toLocation, setToLocation] = useState<Location | null>(null)
+  const [fromLocation, setFromLocation] = useState<Location | null>(initialFromLocation || null)
+  const [toLocation, setToLocation] = useState<Location | null>(initialToLocation || null)
   const [locationError, setLocationError] = useState<string | null>(null)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([52.2297, 21.0122]) // Warszawa
+  const [mapCenter, setMapCenter] = useState<[number, number]>(
+    initialFromLocation ? [initialFromLocation.lat, initialFromLocation.lng] : [52.2297, 21.0122]
+  ) // Warszawa lub lokalizacja początkowa
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   // Search state
@@ -167,7 +171,7 @@ export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
   const [poiMarkers, setPoiMarkers] = useState<POIResult[]>([])
   const [showFormPanel, setShowFormPanel] = useState(false)
   const [isSelectingStart, setIsSelectingStart] = useState(false) // Tryb wyboru lokalizacji startowej
-  const [destinationConfirmed, setDestinationConfirmed] = useState(false) // Czy docelowy został potwierdzony
+  const [destinationConfirmed, setDestinationConfirmed] = useState(!!initialToLocation) // Jeśli mamy początkową lokalizację docelową, ustaw jako potwierdzoną
   const [routeDistance, setRouteDistance] = useState<number | null>(null) // Dystans między punktami
   const [routeCoordinates, setRouteCoordinates] = useState<RoutePoint[]>([]) // Współrzędne trasy
   const [routeDuration, setRouteDuration] = useState<number | null>(null) // Czas trasy w sekundach
@@ -175,8 +179,37 @@ export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
 
+  // Ustaw początkową lokalizację i centrum mapy jeśli są przekazane
   useEffect(() => {
-    getCurrentLocation()
+    if (initialFromLocation) {
+      setMapCenter([initialFromLocation.lat, initialFromLocation.lng])
+      // Nie wywołuj getCurrentLocation jeśli mamy początkową lokalizację
+    } else {
+      getCurrentLocation()
+    }
+  }, [initialFromLocation])
+
+  // Jeśli mamy początkową lokalizację docelową, automatycznie pobierz trasę
+  useEffect(() => {
+    if (initialFromLocation && initialToLocation && !routeDistance) {
+      // Użyj async funkcji wewnątrz useEffect
+      const loadRoute = async () => {
+        const route = await getRoute(
+          initialFromLocation.lat,
+          initialFromLocation.lng,
+          initialToLocation.lat,
+          initialToLocation.lng
+        )
+        
+        if (route) {
+          setRouteCoordinates(route.coordinates)
+          setRouteDistance(route.distance)
+          setRouteDuration(route.duration)
+          setDestinationConfirmed(true)
+        }
+      }
+      loadRoute()
+    }
   }, [])
 
   // Automatycznie włącz tryb wyboru na mapie, jeśli nie ma lokalizacji startowej

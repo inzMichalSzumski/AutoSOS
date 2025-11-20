@@ -22,6 +22,10 @@ public static class DatabaseInitializer
     
     private static async Task SeedOperatorsAsync(AutoSOSDbContext db)
     {
+        // ========================================
+        // TODO: TYMCZASOWE - Seed data operatorów - do usunięcia gdy będą prawdziwi operatorzy
+        // ========================================
+        
         // Więcej operatorów w okolicach Warszawy
         var operatorsData = new[]
         {
@@ -54,7 +58,15 @@ public static class DatabaseInitializer
             // Okolice Warszawy
             new { Name = "Laweta Pruszków", Phone = "+48 513 456 789", VehicleType = "Laweta", Lat = 52.1700, Lng = 20.8000, Available = true, Radius = 30 },
             new { Name = "Pomoc Drogowa Otwock", Phone = "+48 514 567 890", VehicleType = "Laweta", Lat = 52.1100, Lng = 21.2600, Available = true, Radius = 25 },
-            new { Name = "Auto Pomoc Piaseczno", Phone = "+48 515 678 901", VehicleType = "Mechanik", Lat = 52.0800, Lng = 21.0200, Available = true, Radius = 28 }
+            new { Name = "Auto Pomoc Piaseczno", Phone = "+48 515 678 901", VehicleType = "Mechanik", Lat = 52.0800, Lng = 21.0200, Available = true, Radius = 28 },
+            
+            // Okolice Otwocka - więcej operatorów
+            new { Name = "Laweta Otwock Centrum", Phone = "+48 516 789 012", VehicleType = "Laweta", Lat = 52.1050, Lng = 21.2700, Available = true, Radius = 30 },
+            new { Name = "Pomoc Drogowa Otwock 24h", Phone = "+48 517 890 123", VehicleType = "Laweta", Lat = 52.1150, Lng = 21.2500, Available = true, Radius = 25 },
+            new { Name = "Auto Serwis Otwock", Phone = "+48 518 901 234", VehicleType = "Mechanik", Lat = 52.1000, Lng = 21.2800, Available = true, Radius = 28 },
+            new { Name = "Laweta Express Otwock", Phone = "+48 519 012 345", VehicleType = "Laweta", Lat = 52.1200, Lng = 21.2400, Available = true, Radius = 30 },
+            new { Name = "Pomoc Drogowa Karczew", Phone = "+48 520 123 456", VehicleType = "Laweta", Lat = 52.0800, Lng = 21.2500, Available = true, Radius = 25 },
+            new { Name = "Auto Pomoc Józefów", Phone = "+48 521 234 567", VehicleType = "Mechanik", Lat = 52.1400, Lng = 21.2300, Available = true, Radius = 28 }
         };
         
         // Create User and Operator for each entry
@@ -92,6 +104,10 @@ public static class DatabaseInitializer
         
         await db.SaveChangesAsync();
         Console.WriteLine($"✅ Seeded {operatorsData.Length} operators to database");
+        
+        // ========================================
+        // KONIEC TYMCZASOWEGO KODU - Seed data
+        // ========================================
     }
 }
 
