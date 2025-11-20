@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import UserApp from './pages/user/UserApp'
+import RequestHelp from './pages/user/RequestHelp'
 import OperatorLogin from './pages/operator/OperatorLogin'
 import OperatorRegister from './pages/operator/OperatorRegister'
 import OperatorApp from './pages/operator/OperatorApp'
@@ -33,6 +34,7 @@ function App() {
       <Routes>
         {/* Strona dla użytkowników - BEZ logowania */}
         <Route path="/" element={<UserApp />} />
+        <Route path="/request-help" element={<RequestHelp />} />
 
         {/* Strony autentykacji operatora */}
         <Route path="/operator/login" element={<OperatorLogin />} />

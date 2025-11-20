@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Link } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap, ZoomControl } from 'react-leaflet'
-import { Icon } from 'leaflet'
+import { Link, useNavigate } from 'react-router-dom'
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap, ZoomControl, Polyline } from 'react-leaflet'
+import { Icon, DivIcon } from 'leaflet'
 import type { HelpRequest, Location } from '../types'
-import { searchAddresses, searchPOI, reverseGeocode, calculateDistance, type GeocodingResult, type POIResult } from '../services/geocoding'
+import { searchAddresses, searchPOI, reverseGeocode, calculateDistance, getRoute, type GeocodingResult, type POIResult, type RoutePoint } from '../services/geocoding'
 
 // Fix dla ikon Leaflet w Vite
 import 'leaflet/dist/leaflet.css'
@@ -24,11 +24,13 @@ const DefaultIcon = new Icon({
   iconAnchor: [12, 41],
 })
 
-const DestinationIcon = new Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
+// Flaga mety - używamy emoji jako ikony (najprostsze rozwiązanie)
+// Alternatywnie można użyć gotowej ikony PNG z CDN
+const DestinationIcon = new DivIcon({
+  html: '<div style="font-size: 32px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🏁</div>',
+  className: 'checkered-flag-icon',
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
 })
 
 const POIIcon = new Icon({
@@ -47,12 +49,14 @@ function MapCenterTracker({
   fromPosition, 
   toPosition,
   onFromPositionChange,
-  isSelectingStart
+  isSelectingStart,
+  routeCoordinates
 }: { 
   fromPosition: Location | null
   toPosition: Location | null
   onFromPositionChange: (loc: Location) => void
   isSelectingStart: boolean
+  routeCoordinates: RoutePoint[]
 }) {
   const map = useMap()
   
@@ -80,6 +84,28 @@ function MapCenterTracker({
       {/* Pinezka startowa - pokazuj tylko gdy nie wybieramy lokalizacji */}
       {fromPosition && !isSelectingStart && <Marker position={[fromPosition.lat, fromPosition.lng]} icon={DefaultIcon} />}
       {toPosition && <Marker position={[toPosition.lat, toPosition.lng]} icon={DestinationIcon} />}
+      {/* Trasa po ulicach - pokazuj tylko gdy oba są ustawione i mamy współrzędne trasy */}
+      {fromPosition && toPosition && routeCoordinates.length > 0 && (
+        <Polyline
+          positions={routeCoordinates.map(coord => [coord.lat, coord.lng])}
+          color="#3b82f6"
+          weight={4}
+          opacity={0.8}
+        />
+      )}
+      {/* Fallback - prosta linia jeśli nie ma trasy */}
+      {fromPosition && toPosition && routeCoordinates.length === 0 && (
+        <Polyline
+          positions={[
+            [fromPosition.lat, fromPosition.lng],
+            [toPosition.lat, toPosition.lng]
+          ]}
+          color="#9ca3af"
+          weight={2}
+          opacity={0.5}
+          dashArray="5, 5"
+        />
+      )}
     </>
   )
 }
@@ -93,7 +119,37 @@ function MapCenter({ center }: { center: [number, number] }) {
   return null
 }
 
+// Component to fit map bounds to show both points
+function MapBounds({ fromLocation, toLocation }: { fromLocation: Location | null, toLocation: Location | null }) {
+  const map = useMap()
+  
+  useEffect(() => {
+    if (fromLocation && toLocation) {
+      const bounds = L.latLngBounds(
+        [fromLocation.lat, fromLocation.lng],
+        [toLocation.lat, toLocation.lng]
+      )
+      // Padding: [top, right, bottom, left]
+      // Top padding większy aby pasek wyszukiwarki nie zasłaniał mety
+      // Umiarkowane powiększenie (pomiędzy poprzednim a obecnym)
+      map.fitBounds(bounds, { 
+        padding: [100, 50, 50, 50] // [top, right, bottom, left]
+      })
+      
+      // Lekko zmniejsz zoom (około 15% - pomiędzy poprzednim a obecnym)
+      setTimeout(() => {
+        const currentZoom = map.getZoom()
+        const newZoom = Math.max(currentZoom - 1, 5) // Zmniejsz zoom o 1 poziom
+        map.setZoom(newZoom)
+      }, 100)
+    }
+  }, [map, fromLocation, toLocation])
+  
+  return null
+}
+
 export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
+  const navigate = useNavigate()
   const [phoneNumber, setPhoneNumber] = useState('')
   const [description, setDescription] = useState('')
   const [fromLocation, setFromLocation] = useState<Location | null>(null)
@@ -111,6 +167,10 @@ export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
   const [poiMarkers, setPoiMarkers] = useState<POIResult[]>([])
   const [showFormPanel, setShowFormPanel] = useState(false)
   const [isSelectingStart, setIsSelectingStart] = useState(false) // Tryb wyboru lokalizacji startowej
+  const [destinationConfirmed, setDestinationConfirmed] = useState(false) // Czy docelowy został potwierdzony
+  const [routeDistance, setRouteDistance] = useState<number | null>(null) // Dystans między punktami
+  const [routeCoordinates, setRouteCoordinates] = useState<RoutePoint[]>([]) // Współrzędne trasy
+  const [routeDuration, setRouteDuration] = useState<number | null>(null) // Czas trasy w sekundach
   
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
@@ -275,10 +335,44 @@ export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
     // Wyszukiwanie zawsze ustawia lokalizację docelową
     setToLocation(loc)
     setMapCenter([loc.lat, loc.lng])
+    setDestinationConfirmed(false) // Reset potwierdzenia przy nowym wyborze
+    setRouteDistance(null)
+    setRouteCoordinates([]) // Reset trasy
+    setRouteDuration(null)
     
     setSearchQuery('')
     setShowResults(false)
     setPoiMarkers([])
+  }
+
+  const handleConfirmDestination = async () => {
+    if (!fromLocation || !toLocation) return
+    
+    setDestinationConfirmed(true)
+    
+    // Pobierz trasę po ulicach
+    const route = await getRoute(
+      fromLocation.lat,
+      fromLocation.lng,
+      toLocation.lat,
+      toLocation.lng
+    )
+    
+    if (route) {
+      setRouteCoordinates(route.coordinates)
+      setRouteDistance(route.distance)
+      setRouteDuration(route.duration)
+    } else {
+      // Fallback - użyj odległości w linii prostej jeśli nie udało się pobrać trasy
+      const distance = calculateDistance(
+        fromLocation.lat,
+        fromLocation.lng,
+        toLocation.lat,
+        toLocation.lng
+      )
+      setRouteDistance(distance)
+      setRouteCoordinates([]) // Brak trasy - pokaż prostą linię
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -341,7 +435,12 @@ export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
             toPosition={toLocation}
             onFromPositionChange={setFromLocation}
             isSelectingStart={isSelectingStart || !fromLocation}
+            routeCoordinates={routeCoordinates}
           />
+          {/* Fit bounds when destination is confirmed */}
+          {destinationConfirmed && fromLocation && toLocation && (
+            <MapBounds fromLocation={fromLocation} toLocation={toLocation} />
+          )}
           {/* POI Markers */}
           {poiMarkers.map((poi, idx) => (
             <Marker key={idx} position={[poi.lat, poi.lon]} icon={POIIcon} />
@@ -533,6 +632,79 @@ export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
         </div>
       )}
 
+      {/* Confirm Destination Button - pokazuje się po wybraniu adresu docelowego */}
+      {toLocation && !destinationConfirmed && (
+        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20">
+          <div className="bg-white rounded-lg shadow-xl p-4 max-w-sm">
+            <p className="text-sm text-gray-700 mb-3 text-center">
+              Czy to ostateczny wybór?
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleConfirmDestination}
+                className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+              >
+                Tak
+              </button>
+              <button
+                type="button"
+                onClick={() => setToLocation(null)}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg transition"
+              >
+                Nie
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Distance Info - pokazuje się po potwierdzeniu docelowego */}
+      {destinationConfirmed && routeDistance !== null && fromLocation && toLocation && (
+        <div className="absolute top-24 left-4 z-20 bg-white rounded-lg shadow-xl p-4 max-w-xs">
+          <div className="flex items-center gap-2 mb-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 text-primary-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            <h3 className="font-semibold text-gray-900">Dystans</h3>
+          </div>
+          <p className="text-2xl font-bold text-primary-600 mb-1">
+            {routeDistance.toFixed(1)} km
+          </p>
+          {routeDuration && (
+            <p className="text-sm text-gray-600 mb-1">
+              ~{Math.round(routeDuration / 60)} min jazdy
+            </p>
+          )}
+          <p className="text-xs text-gray-500 mb-3">
+            {routeCoordinates.length > 0 ? 'Trasa po ulicach' : 'Odległość w linii prostej'}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              navigate('/request-help', {
+                state: {
+                  fromLocation,
+                  toLocation,
+                  routeDistance,
+                  routeDuration
+                }
+              })
+            }}
+            className="w-full bg-danger-600 hover:bg-danger-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 transform hover:scale-105 shadow-lg"
+          >
+            🚨 Wezwij pomoc
+          </button>
+        </div>
+      )}
+
+
       {/* Floating Action Buttons */}
       <div className="absolute bottom-24 right-4 z-10 flex flex-col gap-3">
         {/* Locate Me Button */}
@@ -569,7 +741,7 @@ export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
           type="button"
           onClick={() => setShowFormPanel(!showFormPanel)}
           className="bg-white rounded-full p-4 shadow-xl hover:bg-gray-50 transition flex items-center justify-center"
-          title={showFormPanel ? 'Ukryj formularz' : 'Pokaż formularz'}
+          title={showFormPanel ? 'Ukryj menu' : 'Pokaż menu'}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -588,12 +760,12 @@ export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
         </button>
       </div>
 
-      {/* Form Panel (Bottom Sheet) */}
+      {/* Menu Panel (Bottom Sheet) - menu z opcjami */}
       {showFormPanel && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 bg-white rounded-t-2xl shadow-2xl max-h-[60vh] overflow-y-auto">
+        <div className="absolute bottom-0 left-0 right-0 z-10 bg-white rounded-t-2xl shadow-2xl max-h-[40vh] overflow-y-auto">
           <div className="sticky top-0 bg-white border-b border-gray-200 p-4">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold text-gray-900">Wezwij Pomoc Drogową</h2>
+              <h2 className="text-xl font-bold text-gray-900">Menu</h2>
               <button
                 type="button"
                 onClick={() => setShowFormPanel(false)}
@@ -610,84 +782,41 @@ export default function HelpRequestForm({ onSubmit }: HelpRequestFormProps) {
                 </svg>
               </button>
             </div>
+        </div>
+
+          <div className="p-4 space-y-3">
             {/* Operator Panel Button */}
             <Link
               to="/operator/login"
-              className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors w-full"
+              className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors w-full"
               onClick={() => setShowFormPanel(false)}
             >
               <span>👔</span>
               <span>Jesteś operatorem?</span>
             </Link>
-          </div>
 
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
-            {locationError && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-yellow-800 text-sm">{locationError}</p>
-              </div>
-            )}
-
-            {fromLocation && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-green-800 text-sm font-medium">
-                  ✓ Lokalizacja startowa: {fromLocation.lat.toFixed(6)}, {fromLocation.lng.toFixed(6)}
-                </p>
-              </div>
-            )}
-
-            {toLocation && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between">
-                <p className="text-blue-800 text-sm font-medium">
-                  ✓ Lokalizacja docelowa: {toLocation.lat.toFixed(6)}, {toLocation.lng.toFixed(6)}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setToLocation(null)}
-                  className="text-blue-600 hover:text-blue-800 text-sm underline"
-                >
-                  Usuń
-                </button>
-              </div>
-            )}
-
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Numer telefonu *
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                placeholder="+48 123 456 789"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                Opis problemu
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Opisz problem (np. awaria silnika, przebita opona, brak paliwa...)"
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition resize-none"
-              />
-            </div>
-
+            {/* Ustawienia - zasłepka */}
             <button
-              type="submit"
-              disabled={isSubmitting || !fromLocation}
-              className="w-full bg-danger-600 hover:bg-danger-700 disabled:bg-gray-400 text-white font-bold py-4 px-6 rounded-lg transition duration-200 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed shadow-lg"
+              type="button"
+              onClick={() => {
+                alert('Ustawienia - funkcja w przygotowaniu')
+                setShowFormPanel(false)
+              }}
+              className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors w-full"
             >
-              {isSubmitting ? 'Wysyłanie...' : '🔍 Znajdź dostępną pomoc'}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>Ustawienia</span>
             </button>
-          </form>
+          </div>
         </div>
       )}
 

@@ -92,6 +92,10 @@ class ApiClient {
     return this.request(`/api/requests/${id}`);
   }
 
+  async getAvailableRequests(): Promise<{ requests: any[] }> {
+    return this.request<{ requests: any[] }>('/api/requests/available');
+  }
+
   async getOperators(
     lat: number,
     lng: number,

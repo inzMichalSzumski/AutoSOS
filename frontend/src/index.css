@@ -29,3 +29,9 @@ body {
   margin-right: 10px !important;
 }
 
+/* Checkered flag icon - remove default Leaflet icon styles */
+.checkered-flag-icon {
+  background: transparent !important;
+  border: none !important;
+}
+

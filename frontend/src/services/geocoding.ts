@@ -191,3 +191,59 @@ function toRad(degrees: number): number {
   return degrees * (Math.PI / 180)
 }
 
+export interface RoutePoint {
+  lat: number
+  lng: number
+}
+
+export interface RouteResult {
+  coordinates: RoutePoint[]
+  distance: number // w kilometrach
+  duration: number // w sekundach
+}
+
+/**
+ * Get route between two points using OSRM (Open Source Routing Machine)
+ */
+export async function getRoute(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number
+): Promise<RouteResult | null> {
+  try {
+    // OSRM public endpoint
+    const response = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`
+    )
+
+    if (!response.ok) {
+      throw new Error('Route request failed')
+    }
+
+    const data = await response.json()
+
+    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+      return null
+    }
+
+    const route = data.routes[0]
+    const geometry = route.geometry.coordinates
+
+    // Konwertuj z [lng, lat] na {lat, lng}
+    const coordinates: RoutePoint[] = geometry.map((coord: [number, number]) => ({
+      lng: coord[0],
+      lat: coord[1],
+    }))
+
+    return {
+      coordinates,
+      distance: route.distance / 1000, // Konwertuj z metrów na kilometry
+      duration: route.duration, // w sekundach
+    }
+  } catch (error) {
+    console.error('Error getting route:', error)
+    return null
+  }
+}
+
