@@ -6,11 +6,11 @@ import type { HelpRequest, Location } from '../types'
 import { type POIResult, type RoutePoint, getRoute, calculateDistance } from '../services/geocoding'
 import { apiClient, type OperatorResponse } from '../services/api'
 
-// Fix dla ikon Leaflet w Vite
+// Fix for Leaflet icons in Vite
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
-// Workaround dla TypeScript - użyj bezpośrednio ścieżek
+// Workaround for TypeScript - use paths directly
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -25,8 +25,8 @@ const DefaultIcon = new Icon({
   iconAnchor: [12, 41],
 })
 
-// Flaga mety - używamy emoji jako ikony (najprostsze rozwiązanie)
-// Alternatywnie można użyć gotowej ikony PNG z CDN
+// Finish flag - using emoji as icon (simplest solution)
+// Alternatively, a ready-made PNG icon from CDN can be used
 const DestinationIcon = new DivIcon({
   html: '<div style="font-size: 32px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🏁</div>',
   className: 'checkered-flag-icon',
@@ -41,7 +41,7 @@ const POIIcon = new Icon({
   iconAnchor: [10, 32],
 })
 
-// Ikonka klucza płaskiego (klucza do naprawy) dla operatorów
+// Wrench icon (repair key) for operators
 const OperatorIcon = new DivIcon({
   html: '<div style="font-size: 28px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🔧</div>',
   className: 'operator-icon',
@@ -83,7 +83,7 @@ function MapCenterTracker({
     const updateLocation = () => {
       if (isSelectingStart && shouldUpdateLocation()) {
         const center = map.getCenter()
-        // Sprawdź, czy lokalizacja faktycznie się zmieniła (unikaj niepotrzebnych aktualizacji)
+        // Check if location actually changed (avoid unnecessary updates)
         if (!fromPosition || 
             Math.abs(fromPosition.lat - center.lat) > 0.0001 || 
             Math.abs(fromPosition.lng - center.lng) > 0.0001) {
@@ -92,7 +92,7 @@ function MapCenterTracker({
       }
       if (isSelectingDestination && shouldUpdateLocation()) {
         const center = map.getCenter()
-        // Sprawdź, czy lokalizacja faktycznie się zmieniła (unikaj niepotrzebnych aktualizacji)
+        // Check if location actually changed (avoid unnecessary updates)
         if (!toPosition || 
             Math.abs(toPosition.lat - center.lat) > 0.0001 || 
             Math.abs(toPosition.lng - center.lng) > 0.0001) {
@@ -101,10 +101,10 @@ function MapCenterTracker({
       }
     }
 
-    // Aktualizuj lokalizację przy przesuwaniu mapy
+    // Update location when map is moved
     map.on('moveend', updateLocation)
     
-    // Aktualizuj od razu
+    // Update immediately
     updateLocation()
 
     return () => {
@@ -114,11 +114,11 @@ function MapCenterTracker({
 
   return (
     <>
-      {/* Pinezka startowa - pokazuj tylko gdy nie wybieramy lokalizacji */}
+      {/* Start marker - show only when not selecting location */}
       {fromPosition && !isSelectingStart && <Marker position={[fromPosition.lat, fromPosition.lng]} icon={DefaultIcon} />}
-      {/* Pinezka docelowa - pokazuj tylko gdy nie wybieramy lokalizacji docelowej */}
+      {/* Destination marker - show only when not selecting destination location */}
       {toPosition && !isSelectingDestination && <Marker position={[toPosition.lat, toPosition.lng]} icon={DestinationIcon} />}
-      {/* Trasa po ulicach - pokazuj tylko gdy oba są ustawione i mamy współrzędne trasy */}
+      {/* Street route - show only when both are set and we have route coordinates */}
       {fromPosition && toPosition && routeCoordinates.length > 0 && (
         <Polyline
           positions={routeCoordinates.map(coord => [coord.lat, coord.lng])}
@@ -127,7 +127,7 @@ function MapCenterTracker({
           opacity={0.8}
         />
       )}
-      {/* Fallback - prosta linia jeśli nie ma trasy */}
+      {/* Fallback - straight line if no route */}
       {fromPosition && toPosition && routeCoordinates.length === 0 && (
         <Polyline
           positions={[
@@ -140,7 +140,7 @@ function MapCenterTracker({
           dashArray="5, 5"
         />
       )}
-      {/* Markery operatorów - pokazuj tylko gdy nie wybieramy lokalizacji */}
+      {/* Operator markers - show only when not selecting location */}
       {!isSelectingStart && !isSelectingDestination && nearbyOperators.map((operator) => (
         operator.currentLatitude && operator.currentLongitude && (
           <Marker
@@ -169,12 +169,12 @@ function MapBounds({ fromLocation, toLocation, routeCoordinates }: { fromLocatio
   
   useEffect(() => {
     if (fromLocation && toLocation) {
-      // Jeśli mamy współrzędne trasy, użyj ich do ustawienia bounds
+      // If we have route coordinates, use them to set bounds
       if (routeCoordinates.length > 0) {
         const bounds = L.latLngBounds(
           routeCoordinates.map(coord => [coord.lat, coord.lng] as [number, number])
         )
-        // Dodaj również punkty startowy i docelowy na wypadek, gdyby były poza trasą
+        // Also add start and destination points in case they are outside the route
         bounds.extend([fromLocation.lat, fromLocation.lng])
         bounds.extend([toLocation.lat, toLocation.lng])
         
@@ -183,7 +183,7 @@ function MapBounds({ fromLocation, toLocation, routeCoordinates }: { fromLocatio
           paddingBottomRight: [150, 50]
         } as L.FitBoundsOptions)
       } else {
-        // Jeśli nie ma trasy, użyj tylko punktów
+        // If no route, use only points
         const bounds = L.latLngBounds(
           [fromLocation.lat, fromLocation.lng],
           [toLocation.lat, toLocation.lng]
@@ -208,38 +208,38 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   const [locationError, setLocationError] = useState<string | null>(null)
   const [mapCenter, setMapCenter] = useState<[number, number]>(
     initialFromLocation ? [initialFromLocation.lat, initialFromLocation.lng] : [52.2297, 21.0122]
-  ) // Warszawa lub lokalizacja początkowa
+  ) // Warsaw or initial location
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   const [poiMarkers, setPoiMarkers] = useState<POIResult[]>([])
   const [showFormPanel, setShowFormPanel] = useState(false)
-  const [isSelectingStart, setIsSelectingStart] = useState(false) // Tryb wyboru lokalizacji startowej
-  const [isSelectingDestination, setIsSelectingDestination] = useState(false) // Tryb wyboru lokalizacji docelowej
-  const [isFromLocationFromGPS, setIsFromLocationFromGPS] = useState(false) // Czy punkt startowy jest z geolokalizacji
-  const [routeDistance, setRouteDistance] = useState<number | null>(null) // Dystans między punktami
-  const [routeCoordinates, setRouteCoordinates] = useState<RoutePoint[]>([]) // Współrzędne trasy
-  const [routeDuration, setRouteDuration] = useState<number | null>(null) // Czas trasy w sekundach
-  const [nearbyOperators, setNearbyOperators] = useState<OperatorResponse[]>([]) // Najbliżsi operatorzy
+  const [isSelectingStart, setIsSelectingStart] = useState(false) // Start location selection mode
+  const [isSelectingDestination, setIsSelectingDestination] = useState(false) // Destination location selection mode
+  const [isFromLocationFromGPS, setIsFromLocationFromGPS] = useState(false) // Whether start point is from geolocation
+  const [routeDistance, setRouteDistance] = useState<number | null>(null) // Distance between points
+  const [routeCoordinates, setRouteCoordinates] = useState<RoutePoint[]>([]) // Route coordinates
+  const [routeDuration, setRouteDuration] = useState<number | null>(null) // Route duration in seconds
+  const [nearbyOperators, setNearbyOperators] = useState<OperatorResponse[]>([]) // Nearest operators
   
-  const watchPositionIdRef = useRef<number | null>(null) // ID watchPosition do zatrzymania
-  const isUpdatingFromGPSRef = useRef<boolean>(false) // Flaga wskazująca, że aktualizujemy lokalizację z GPS
-  const panelRef = useRef<HTMLDivElement>(null) // Ref do panelu z lokalizacjami
+  const watchPositionIdRef = useRef<number | null>(null) // watchPosition ID to stop
+  const isUpdatingFromGPSRef = useRef<boolean>(false) // Flag indicating we're updating location from GPS
+  const panelRef = useRef<HTMLDivElement>(null) // Ref to locations panel
 
-  // Ustaw początkową lokalizację i centrum mapy jeśli są przekazane
+  // Set initial location and map center if provided
   useEffect(() => {
     if (initialFromLocation) {
       setMapCenter([initialFromLocation.lat, initialFromLocation.lng])
-      setIsFromLocationFromGPS(false) // Początkowa lokalizacja nie jest z GPS
-      // Nie wywołuj getCurrentLocation jeśli mamy początkową lokalizację
+      setIsFromLocationFromGPS(false) // Initial location is not from GPS
+      // Don't call getCurrentLocation if we have initial location
     } else {
       getCurrentLocation()
     }
   }, [initialFromLocation])
 
-  // Automatycznie włącz tryb wyboru na mapie, jeśli nie ma lokalizacji startowej
+  // Automatically enable selection mode on map if no start location
   useEffect(() => {
     if (!fromLocation && !locationError) {
-      // Poczekaj chwilę, żeby geolokalizacja mogła się wykonać
+      // Wait a bit for geolocation to execute
       const timer = setTimeout(() => {
         if (!fromLocation) {
           setIsSelectingStart(true)
@@ -249,20 +249,20 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
     }
   }, [fromLocation, locationError])
 
-  // Pobierz najbliższych operatorów gdy użytkownik ma ustaloną lokalizację
+  // Get nearest operators when user has established location
   useEffect(() => {
     const loadNearbyOperators = async () => {
       if (fromLocation && !isSelectingStart) {
         try {
           const response = await apiClient.getOperators(fromLocation.lat, fromLocation.lng, 30)
-          // Pobierz tylko 10 najbliższych operatorów z lokalizacją
+          // Get only 10 nearest operators with location
           const operatorsWithLocation = response.operators
             .filter(op => op.currentLatitude && op.currentLongitude)
             .slice(0, 10)
           setNearbyOperators(operatorsWithLocation)
         } catch (error) {
           console.error('Error loading nearby operators:', error)
-          // Nie pokazuj błędu użytkownikowi - to tylko informacyjne markery
+          // Don't show error to user - these are just informational markers
         }
       } else {
         setNearbyOperators([])
@@ -272,10 +272,10 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
     loadNearbyOperators()
   }, [fromLocation, isSelectingStart])
 
-  // Oblicz trasę i dystans gdy oba punkty są ustawione
+  // Calculate route and distance when both points are set
   useEffect(() => {
     const calculateRoute = async () => {
-      // Obliczaj trasę tylko gdy oba punkty są ustawione i nie wybieramy lokalizacji
+      // Calculate route only when both points are set and not selecting location
       if (fromLocation && toLocation && !isSelectingStart && !isSelectingDestination) {
         try {
           const route = await getRoute(
@@ -290,7 +290,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
             setRouteDistance(route.distance)
             setRouteDuration(route.duration)
           } else {
-            // Jeśli nie udało się pobrać trasy, oblicz dystans w linii prostej
+            // If route fetch failed, calculate straight-line distance
             const distance = calculateDistance(
               fromLocation.lat,
               fromLocation.lng,
@@ -303,7 +303,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
           }
         } catch (error) {
           console.error('Error calculating route:', error)
-          // W przypadku błędu, oblicz dystans w linii prostej
+          // On error, calculate straight-line distance
           const distance = calculateDistance(
             fromLocation.lat,
             fromLocation.lng,
@@ -315,7 +315,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
           setRouteDuration(null)
         }
       } else {
-        // Wyczyść trasę gdy nie ma obu punktów
+        // Clear route when both points are not set
         setRouteCoordinates([])
         setRouteDistance(null)
         setRouteDuration(null)
@@ -331,25 +331,25 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
       return
     }
 
-    // Zatrzymaj poprzednie śledzenie jeśli istnieje
+    // Stop previous tracking if exists
     if (watchPositionIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchPositionIdRef.current)
       watchPositionIdRef.current = null
     }
 
-    // Wyczyść poprzedni błąd
+    // Clear previous error
     setLocationError(null)
 
     const options: PositionOptions = {
-      enableHighAccuracy: true, // Użyj GPS jeśli dostępny
-      timeout: 15000, // 15 sekund timeout
-      maximumAge: 60000, // Akceptuj pozycję starszą niż 1 minuta
+      enableHighAccuracy: true, // Use GPS if available
+      timeout: 15000, // 15 seconds timeout
+      maximumAge: 60000, // Accept position older than 1 minute
     }
 
-    // Ustaw flagę, że aktualizujemy lokalizację z GPS
+    // Set flag that we're updating location from GPS
     isUpdatingFromGPSRef.current = true
     
-    // Najpierw pobierz aktualną pozycję
+    // First get current position
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const loc = {
@@ -360,14 +360,14 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         setMapCenter([loc.lat, loc.lng])
         setLocationError(null)
         setIsSelectingStart(false)
-        setIsFromLocationFromGPS(true) // Oznacz że lokalizacja jest z GPS
-        // Zresetuj flagę po zaktualizowaniu lokalizacji
+        setIsFromLocationFromGPS(true) // Mark that location is from GPS
+        // Reset flag after updating location
         setTimeout(() => {
           isUpdatingFromGPSRef.current = false
         }, 100)
-        console.log('Geolokalizacja udana:', loc)
+        console.log('Geolocation successful:', loc)
 
-        // Rozpocznij śledzenie zmian lokalizacji w czasie rzeczywistym
+        // Start tracking location changes in real-time
         watchPositionIdRef.current = navigator.geolocation.watchPosition(
           (position) => {
             const loc = {
@@ -375,7 +375,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               lng: position.coords.longitude,
             }
             setFromLocation(loc)
-            // Aktualizuj centrum mapy tylko jeśli użytkownik nie przesunął mapy ręcznie
+            // Update map center only if user hasn't moved map manually
             if (isFromLocationFromGPS) {
               setMapCenter([loc.lat, loc.lng])
             }
@@ -383,7 +383,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
           },
           (error) => {
             console.error('Błąd śledzenia lokalizacji:', error)
-            // Nie pokazuj błędu użytkownikowi - tylko loguj
+            // Don't show error to user - only log
           },
           options
         )
@@ -409,14 +409,14 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         setLocationError(errorMessage)
         console.error('Błąd geolokalizacji:', error.code, error.message)
         
-        // Zresetuj flagę jeśli nie ma fallback
+        // Reset flag if no fallback
         if (error.code !== error.TIMEOUT) {
           isUpdatingFromGPSRef.current = false
         }
         
-        // Fallback: spróbuj użyć mniej precyzyjnej lokalizacji
+        // Fallback: try to use less precise location
         if (error.code === error.TIMEOUT) {
-          console.log('Próba użycia mniej precyzyjnej lokalizacji...')
+          console.log('Attempting to use less precise location...')
           isUpdatingFromGPSRef.current = true
           navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -427,14 +427,14 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               setFromLocation(loc)
               setMapCenter([loc.lat, loc.lng])
               setLocationError(null)
-              setIsFromLocationFromGPS(true) // Oznacz że lokalizacja jest z GPS
-              // Zresetuj flagę po zaktualizowaniu lokalizacji
+              setIsFromLocationFromGPS(true) // Mark that location is from GPS
+              // Reset flag after updating location
               setTimeout(() => {
                 isUpdatingFromGPSRef.current = false
               }, 100)
-              console.log('Geolokalizacja udana (fallback):', loc)
+              console.log('Geolocation successful (fallback):', loc)
 
-              // Rozpocznij śledzenie zmian lokalizacji w czasie rzeczywistym
+              // Start tracking location changes in real-time
               if (watchPositionIdRef.current === null) {
                 watchPositionIdRef.current = navigator.geolocation.watchPosition(
                   (position) => {
@@ -443,14 +443,14 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
                       lng: position.coords.longitude,
                     }
                     setFromLocation(loc)
-                    // Aktualizuj centrum mapy tylko jeśli użytkownik nie przesunął mapy ręcznie
+                    // Update map center only if user hasn't moved map manually
                     if (isFromLocationFromGPS) {
                       setMapCenter([loc.lat, loc.lng])
                     }
-                    console.log('Lokalizacja zaktualizowana (fallback):', loc)
+                    console.log('Location updated (fallback):', loc)
                   },
                   (error) => {
-                    console.error('Błąd śledzenia lokalizacji (fallback):', error)
+                    console.error('Error tracking location (fallback):', error)
                   },
                   {
                     enableHighAccuracy: false,
@@ -461,12 +461,12 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               }
             },
             () => {
-              // Jeśli fallback też nie zadziała, pozostaw komunikat błędu
+              // If fallback also fails, leave error message
             },
             {
               enableHighAccuracy: false,
               timeout: 10000,
-              maximumAge: 300000, // 5 minut
+              maximumAge: 300000, // 5 minutes
             }
           )
         }
@@ -476,7 +476,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   }
 
 
-  // Cleanup: zatrzymaj śledzenie GPS przy odmontowaniu komponentu
+  // Cleanup: stop GPS tracking when component unmounts
   useEffect(() => {
     return () => {
       if (watchPositionIdRef.current !== null) {
@@ -556,11 +556,11 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
                 <button
                   type="button"
                   onClick={() => {
-                    setIsSelectingDestination(false) // Wyłącz wybór miejsca docelowego
+                    setIsSelectingDestination(false) // Disable destination selection
                     setIsSelectingStart(true)
                     setFromLocation(null)
                     setIsFromLocationFromGPS(false)
-                    // Zatrzymaj śledzenie GPS gdy użytkownik edytuje lokalizację
+                    // Stop GPS tracking when user edits location
                     if (watchPositionIdRef.current !== null) {
                       navigator.geolocation.clearWatch(watchPositionIdRef.current)
                       watchPositionIdRef.current = null
@@ -593,7 +593,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               <button
                 type="button"
                 onClick={() => {
-                  setIsSelectingStart(false) // Wyłącz wybór miejsca startowego
+                  setIsSelectingStart(false) // Disable start location selection
                   setIsSelectingDestination(true)
                 }}
                 className="text-xs text-primary-600 hover:text-primary-700 font-medium"
@@ -605,7 +605,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               <button
                 type="button"
                 onClick={() => {
-                  setIsSelectingStart(false) // Wyłącz wybór miejsca startowego
+                  setIsSelectingStart(false) // Disable start location selection
                   setIsSelectingDestination(true)
                 }}
                 className="text-xs text-primary-600 hover:text-primary-700 font-medium"
@@ -766,8 +766,8 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               toPosition={toLocation}
               onFromPositionChange={(loc) => {
                 setFromLocation(loc)
-                setIsFromLocationFromGPS(false) // Oznacz że lokalizacja jest ustawiona ręcznie
-                // Zatrzymaj śledzenie GPS gdy użytkownik ustawia lokalizację ręcznie
+                setIsFromLocationFromGPS(false) // Mark that location is set manually
+                // Stop GPS tracking when user sets location manually
                 if (watchPositionIdRef.current !== null) {
                   navigator.geolocation.clearWatch(watchPositionIdRef.current)
                   watchPositionIdRef.current = null
