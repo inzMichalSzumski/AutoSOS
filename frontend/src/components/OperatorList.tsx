@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react'
 import type { HelpRequest, Operator, RequestStatusType } from '../types'
 
 interface OperatorListProps {
@@ -10,6 +11,8 @@ interface OperatorListProps {
   status: RequestStatusType
 }
 
+type SortOption = 'alphabetical' | 'price'
+
 export default function OperatorList({
   operators,
   onSelect,
@@ -18,6 +21,37 @@ export default function OperatorList({
   onRetry,
   status,
 }: OperatorListProps) {
+  const [sortBy, setSortBy] = useState<SortOption>('price')
+
+  // Sortowanie operatorów
+  const sortedOperators = useMemo(() => {
+    const operatorsCopy = [...operators]
+    
+    switch (sortBy) {
+      case 'alphabetical':
+        return operatorsCopy.sort((a, b) => a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' }))
+      case 'price':
+        return operatorsCopy.sort((a, b) => {
+          // Operatorzy bez ceny (undefined/null) trafiają na dół
+          const aHasPrice = a.estimatedPrice !== undefined && a.estimatedPrice !== null
+          const bHasPrice = b.estimatedPrice !== undefined && b.estimatedPrice !== null
+          
+          // Oba mają cenę - sortuj od najniższej do najwyższej
+          if (aHasPrice && bHasPrice) {
+            return a.estimatedPrice! - b.estimatedPrice!
+          }
+          
+          // Operator z ceną jest przed operatorem bez ceny
+          if (aHasPrice && !bHasPrice) return -1
+          if (!aHasPrice && bHasPrice) return 1
+          
+          // Oba bez ceny - zachowaj oryginalną kolejność
+          return 0
+        })
+      default:
+        return operatorsCopy
+    }
+  }, [operators, sortBy])
   if (status === 'searching' && operators.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -64,16 +98,36 @@ export default function OperatorList({
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl shadow-xl p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {status === 'offer_received' ? 'Wybierz operatora' : 'Dostępna pomoc'}
-        </h2>
-        <p className="text-gray-600 mb-4">
-          Znaleziono {operators.length} {operators.length === 1 ? 'operatora' : 'operatorów'} w pobliżu
-        </p>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {status === 'offer_received' ? 'Wybierz operatora' : 'Dostępna pomoc'}
+            </h2>
+            <p className="text-gray-600">
+              Znaleziono {operators.length} {operators.length === 1 ? 'operatora' : 'operatorów'} w pobliżu
+            </p>
+          </div>
+          
+          {/* Sortowanie */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="sort-select" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+              Sortuj:
+            </label>
+            <select
+              id="sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+            >
+              <option value="price">Cena (najniższa)</option>
+              <option value="alphabetical">Alfabetycznie</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-4">
-        {operators.map((operator) => (
+        {sortedOperators.map((operator) => (
           <div
             key={operator.id}
             className={`bg-white rounded-xl shadow-lg p-6 cursor-pointer transition-all ${
