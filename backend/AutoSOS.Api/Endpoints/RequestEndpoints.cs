@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using AutoSOS.Api.Data;
 using AutoSOS.Api.Hubs;
 using AutoSOS.Api.Models;
+using AutoSOS.Api.Services;
 
 namespace AutoSOS.Api.Endpoints;
 
@@ -14,13 +15,13 @@ public static class RequestEndpoints
             .WithTags("Requests")
             .WithOpenApi();
 
-        // POST /api/requests - Tworzenie zgłoszenia
+        // POST /api/requests - Create a new help request
         group.MapPost("/", async (
             CreateRequestDto dto,
             AutoSOSDbContext db,
             IHubContext<RequestHub> hub) =>
         {
-            // Znajdź lub utwórz User dla klienta
+            // Find or create User for the customer
             var user = await db.Users
                 .FirstOrDefaultAsync(u => u.PhoneNumber == dto.PhoneNumber && u.Role == UserRole.Customer);
 
@@ -48,20 +49,24 @@ public static class RequestEndpoints
                 ToLatitude = dto.ToLatitude,
                 ToLongitude = dto.ToLongitude,
                 Description = dto.Description,
-                Status = RequestStatus.Pending,
+                RequiredEquipmentId = dto.RequiredEquipmentId,
+                Status = RequestStatus.Searching, // Set to Searching so operators can see the request
                 CreatedAt = DateTime.UtcNow
             };
 
             db.Requests.Add(request);
             await db.SaveChangesAsync();
 
-            // Powiadom przez SignalR
+            // Notify client via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("RequestCreated", new
             {
                 request.Id,
                 request.Status,
                 request.CreatedAt
             });
+
+            // Notifications to operators will be sent by RequestNotificationService
+            // (Background Service checks every 5 seconds and sends notifications)
 
             return Results.Created($"/api/requests/{request.Id}", new
             {
@@ -74,7 +79,7 @@ public static class RequestEndpoints
         .WithName("CreateRequest")
         .WithOpenApi();
 
-        // GET /api/requests/{id} - Pobranie zgłoszenia
+        // GET /api/requests/{id} - Get a specific request
         group.MapGet("/{id:guid}", async (Guid id, AutoSOSDbContext db) =>
         {
             var request = await db.Requests.FindAsync(id);
@@ -97,6 +102,139 @@ public static class RequestEndpoints
             });
         })
         .WithName("GetRequest")
+        .WithOpenApi();
+
+        // PUT /api/requests/{id}/cancel - Cancel a request
+        group.MapPut("/{id:guid}/cancel", async (
+            Guid id,
+            CancelRequestDto dto,
+            AutoSOSDbContext db,
+            IHubContext<RequestHub> hub) =>
+        {
+            var request = await db.Requests.FindAsync(id);
+            
+            if (request == null)
+                return Results.NotFound(new { error = "Request not found" });
+
+            // Security: Verify that the phone number matches the request owner
+            if (request.PhoneNumber != dto.PhoneNumber)
+            {
+                return Results.Forbid();
+            }
+
+            // Can only cancel requests in Searching or Pending status
+            if (request.Status != RequestStatus.Searching && request.Status != RequestStatus.Pending)
+            {
+                return Results.BadRequest(new { error = "Cannot cancel request in current status" });
+            }
+
+            request.Status = RequestStatus.Cancelled;
+            request.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+
+            // Notify client via SignalR
+            await hub.Clients.Group($"request-{request.Id}").SendAsync("RequestCancelled", new
+            {
+                request.Id,
+                request.Status,
+                message = "Request has been cancelled"
+            });
+
+            return Results.Ok(new
+            {
+                request.Id,
+                request.Status,
+                message = "Request cancelled successfully"
+            });
+        })
+        .WithName("CancelRequest")
+        .WithOpenApi();
+
+        // GET /api/requests/available - Get available requests for operators
+        group.MapGet("/available", async (
+            AutoSOSDbContext db,
+            HttpContext context) =>
+        {
+            // Get operatorId from JWT token
+            var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
+            if (operatorIdClaim == null || !Guid.TryParse(operatorIdClaim, out var operatorId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Get operator location and equipment
+            var operatorEntity = await db.Operators
+                .Include(o => o.OperatorEquipment)
+                    .ThenInclude(oe => oe.Equipment)
+                .FirstOrDefaultAsync(o => o.Id == operatorId);
+            
+            if (operatorEntity == null || !operatorEntity.IsAvailable || 
+                !operatorEntity.CurrentLatitude.HasValue || !operatorEntity.CurrentLongitude.HasValue)
+            {
+                return Results.Ok(new { requests = Array.Empty<object>() });
+            }
+            
+            // Get equipment IDs that the operator possesses
+            var operatorEquipmentIds = operatorEntity.OperatorEquipment
+                .Select(oe => oe.EquipmentId)
+                .ToList();
+
+            // Get pending and searching requests
+            var availableRequests = await db.Requests
+                .Where(r => r.Status == RequestStatus.Pending || r.Status == RequestStatus.Searching)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            // Calculate distance and filter by service radius and equipment
+            var requestsWithDistance = availableRequests
+                .Select(r => new
+                {
+                    r.Id,
+                    r.PhoneNumber,
+                    r.FromLatitude,
+                    r.FromLongitude,
+                    r.ToLatitude,
+                    r.ToLongitude,
+                    r.Description,
+                    r.RequiredEquipmentId,
+                    r.RequiredEquipment,
+                    r.Status,
+                    r.CreatedAt,
+                    Distance = GeolocationService.CalculateDistance(
+                        operatorEntity.CurrentLatitude!.Value,
+                        operatorEntity.CurrentLongitude!.Value,
+                        r.FromLatitude,
+                        r.FromLongitude
+                    ),
+                    HasRequiredEquipment = r.RequiredEquipmentId.HasValue
+                        ? operatorEquipmentIds.Contains(r.RequiredEquipmentId.Value)
+                        : true // If no specific equipment required, accept all operators
+                })
+                .Where(r => r.Distance <= (operatorEntity.ServiceRadiusKm ?? 20))
+                // Filter based on required equipment
+                .Where(r => r.HasRequiredEquipment)
+                .OrderBy(r => r.Distance)
+                .Select(r => new
+                {
+                    r.Id,
+                    r.PhoneNumber,
+                    r.FromLatitude,
+                    r.FromLongitude,
+                    r.ToLatitude,
+                    r.ToLongitude,
+                    r.Description,
+                    RequiredEquipmentId = r.RequiredEquipmentId,
+                    RequiredEquipmentName = r.RequiredEquipment != null ? r.RequiredEquipment.Name : null,
+                    r.Status,
+                    r.CreatedAt,
+                    Distance = Math.Round(r.Distance, 1)
+                })
+                .ToList();
+
+            return Results.Ok(new { requests = requestsWithDistance });
+        })
+        .RequireAuthorization()
+        .WithName("GetAvailableRequests")
         .WithOpenApi();
     }
 }

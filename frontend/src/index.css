@@ -23,3 +23,15 @@ body {
   width: 100%;
 }
 
+/* Ensure zoom controls are visible and not overlapped */
+.leaflet-top.leaflet-right {
+  margin-top: 80px !important;
+  margin-right: 10px !important;
+}
+
+/* Checkered flag icon - remove default Leaflet icon styles */
+.checkered-flag-icon {
+  background: transparent !important;
+  border: none !important;
+}
+

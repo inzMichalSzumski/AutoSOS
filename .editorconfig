@@ -1,0 +1,28 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C# files - enforce English comments
+[*.cs]
+# IMPORTANT: All comments must be in English
+# StyleCop.Analyzers is configured to encourage documentation
+# Code reviews should verify comment language
+
+# TypeScript/JavaScript files - enforce English comments
+[*.{ts,tsx,js,jsx}]
+# IMPORTANT: All comments must be in English
+# ESLint is configured with comment formatting rules
+# Code reviews should verify comment language
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+

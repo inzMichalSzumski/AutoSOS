@@ -33,6 +33,8 @@ public static class OperatorEndpoints
                     op.Name,
                     op.Phone,
                     op.VehicleType,
+                    CurrentLatitude = op.CurrentLatitude!.Value,
+                    CurrentLongitude = op.CurrentLongitude!.Value,
                     Distance = GeolocationService.CalculateDistance(
                         lat, lng,
                         op.CurrentLatitude!.Value,
@@ -48,6 +50,8 @@ public static class OperatorEndpoints
                     op.Name,
                     op.Phone,
                     op.VehicleType,
+                    CurrentLatitude = op.CurrentLatitude,
+                    CurrentLongitude = op.CurrentLongitude,
                     Distance = Math.Round(op.Distance, 1)
                 })
                 .ToList();

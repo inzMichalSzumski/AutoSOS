@@ -14,7 +14,7 @@ public static class OfferEndpoints
             .WithTags("Offers")
             .WithOpenApi();
 
-        // POST /api/offers - Operator składa ofertę
+        // POST /api/offers - Operator submits an offer
         group.MapPost("/", async (
             CreateOfferDto dto,
             AutoSOSDbContext db,
@@ -45,7 +45,7 @@ public static class OfferEndpoints
 
             await db.SaveChangesAsync();
 
-            // Powiadom przez SignalR
+            // Notify via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("OfferReceived", new
             {
                 offer.Id,
@@ -89,7 +89,7 @@ public static class OfferEndpoints
             offer.Request.Status = RequestStatus.Accepted;
             offer.Request.UpdatedAt = DateTime.UtcNow;
 
-            // Odrzuć inne oferty dla tego zgłoszenia
+            // Reject other offers for this request
             var otherOffers = await db.Offers
                 .Where(o => o.RequestId == offer.RequestId && o.Id != id && o.Status == OfferStatus.Proposed)
                 .ToListAsync();
@@ -101,7 +101,7 @@ public static class OfferEndpoints
 
             await db.SaveChangesAsync();
 
-            // Powiadom przez SignalR
+            // Notify via SignalR
             await hub.Clients.Group($"request-{offer.Request.Id}").SendAsync("OfferAccepted", new
             {
                 offer.Id,

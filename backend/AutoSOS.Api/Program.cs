@@ -40,6 +40,9 @@ builder.Services.AddDbContext<AutoSOSDbContext>(options =>
 // SignalR
 builder.Services.AddSignalR();
 
+// Background Services
+builder.Services.AddHostedService<RequestNotificationService>();
+
 // CORS - allow frontend from GitHub Pages
 builder.Services.AddCors(options =>
 {
@@ -78,6 +81,7 @@ app.MapAuthEndpoints();
 app.MapRequestEndpoints();
 app.MapOperatorEndpoints();
 app.MapOfferEndpoints();
+app.MapEquipmentEndpoints();
 
 app.Run();
 

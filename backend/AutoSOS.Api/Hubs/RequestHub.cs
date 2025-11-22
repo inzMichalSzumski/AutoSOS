@@ -13,5 +13,16 @@ public class RequestHub : Hub
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"request-{requestId}");
     }
+
+    public async Task JoinOperatorGroup(string operatorId)
+    {
+        // Operators join their group to receive notifications
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"operator-{operatorId}");
+    }
+
+    public async Task LeaveOperatorGroup(string operatorId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"operator-{operatorId}");
+    }
 }
 

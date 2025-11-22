@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authService } from '../../services/auth'
+import { apiClient, type Equipment } from '../../services/api'
 
 export default function OperatorRegister() {
   const navigate = useNavigate()
@@ -11,10 +12,29 @@ export default function OperatorRegister() {
     name: '',
     phone: '',
     vehicleType: 'Laweta',
-    serviceRadiusKm: 20
+    serviceRadiusKm: 20,
+    equipmentIds: [] as string[]
   })
+  const [equipment, setEquipment] = useState<Equipment[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingEquipment, setLoadingEquipment] = useState(true)
+
+  // Pobierz dostępne sprzęty z API
+  useEffect(() => {
+    const loadEquipment = async () => {
+      try {
+        const response = await apiClient.getEquipment()
+        setEquipment(response.equipment)
+      } catch (err) {
+        console.error('Error loading equipment:', err)
+        setError('Nie udało się załadować listy sprzętów')
+      } finally {
+        setLoadingEquipment(false)
+      }
+    }
+    loadEquipment()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,7 +60,8 @@ export default function OperatorRegister() {
         name: formData.name,
         phone: formData.phone,
         vehicleType: formData.vehicleType,
-        serviceRadiusKm: formData.serviceRadiusKm
+        serviceRadiusKm: formData.serviceRadiusKm,
+        equipmentIds: formData.equipmentIds
       })
 
       // Przekieruj do logowania
@@ -175,6 +196,51 @@ export default function OperatorRegister() {
               onChange={(e) => setFormData({ ...formData, serviceRadiusKm: parseInt(e.target.value) })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Posiadany sprzęt
+            </label>
+            {loadingEquipment ? (
+              <div className="text-sm text-gray-500">Ładowanie sprzętów...</div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  {equipment.map((eq) => (
+                    <label key={eq.id} className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.equipmentIds.includes(eq.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({
+                              ...formData,
+                              equipmentIds: [...formData.equipmentIds, eq.id]
+                            })
+                          } else {
+                            setFormData({
+                              ...formData,
+                              equipmentIds: formData.equipmentIds.filter(id => id !== eq.id)
+                            })
+                          }
+                        }}
+                        className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mt-0.5"
+                      />
+                      <div className="flex-1">
+                        <span className="text-gray-700 font-medium">{eq.name}</span>
+                        {eq.description && (
+                          <p className="text-xs text-gray-500 mt-0.5">{eq.description}</p>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Zaznacz wszystkie rodzaje sprzętu, którymi dysponujesz
+                </p>
+              </>
+            )}
           </div>
 
           <button

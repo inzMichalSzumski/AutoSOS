@@ -6,6 +6,7 @@ public record CreateRequestDto(
     double FromLongitude,
     double? ToLatitude,
     double? ToLongitude,
-    string? Description
+    string? Description,
+    Guid? RequiredEquipmentId // ID of equipment/service required for this request
 );
 

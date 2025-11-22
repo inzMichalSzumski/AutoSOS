@@ -1,9 +1,110 @@
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
+import { apiClient } from '../../services/api'
+import { signalRService } from '../../services/signalr'
+import * as signalR from '@microsoft/signalr'
+
+interface AvailableRequest {
+  id: string
+  phoneNumber: string
+  fromLatitude: number
+  fromLongitude: number
+  toLatitude?: number
+  toLongitude?: number
+  description?: string
+  status: string
+  createdAt: string
+  distance: number
+}
 
 export default function OperatorApp() {
-  const { operatorName, logout } = useAuth()
+  const { operatorName, operatorId, logout } = useAuth()
   const navigate = useNavigate()
+  const [requests, setRequests] = useState<AvailableRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedRequest, setSelectedRequest] = useState<AvailableRequest | null>(null)
+  const [offerPrice, setOfferPrice] = useState('')
+  const [offerTime, setOfferTime] = useState('')
+  const [submittingOffer, setSubmittingOffer] = useState(false)
+
+  useEffect(() => {
+    loadRequests()
+    
+    // Połącz z SignalR, aby otrzymywać powiadomienia w czasie rzeczywistym
+    let connection: signalR.HubConnection | null = null
+    
+    const setupSignalR = async () => {
+      if (!operatorId) return
+      
+      try {
+        connection = await signalRService.connectToOperatorHub(operatorId)
+        
+        // Nasłuchuj na nowe zgłoszenia
+        connection.on('NewRequest', (request: AvailableRequest) => {
+          // Dodaj nowe zgłoszenie do listy, jeśli jeszcze go nie ma
+          setRequests(prev => {
+            const exists = prev.some(r => r.id === request.id)
+            if (exists) return prev
+            return [request, ...prev].sort((a, b) => a.distance - b.distance)
+          })
+        })
+      } catch (error) {
+        console.error('Error setting up SignalR:', error)
+      }
+    }
+    
+    setupSignalR()
+    
+    // Odświeżaj co 30 sekund (SignalR będzie głównym źródłem powiadomień)
+    const interval = setInterval(loadRequests, 30000)
+    
+    return () => {
+      clearInterval(interval)
+      if (connection) {
+        connection.off('NewRequest')
+      }
+    }
+  }, [operatorId])
+
+  const loadRequests = async () => {
+    try {
+      setLoading(true)
+      const response = await apiClient.getAvailableRequests()
+      setRequests(response.requests)
+    } catch (error) {
+      console.error('Error loading requests:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmitOffer = async () => {
+    if (!selectedRequest || !operatorId || !offerPrice) {
+      alert('Proszę wypełnić wszystkie wymagane pola')
+      return
+    }
+
+    try {
+      setSubmittingOffer(true)
+      await apiClient.createOffer({
+        requestId: selectedRequest.id,
+        operatorId: operatorId,
+        price: parseFloat(offerPrice),
+        estimatedTimeMinutes: offerTime ? parseInt(offerTime) : undefined,
+      })
+      alert('Oferta została wysłana!')
+      setSelectedRequest(null)
+      setOfferPrice('')
+      setOfferTime('')
+      loadRequests()
+    } catch (error) {
+      console.error('Error submitting offer:', error)
+      alert('Nie udało się wysłać oferty. Spróbuj ponownie.')
+    } finally {
+      setSubmittingOffer(false)
+    }
+  }
 
   const handleLogout = () => {
     logout()
@@ -35,61 +136,131 @@ export default function OperatorApp() {
 
         {/* Dashboard Content */}
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Dashboard
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Tutaj będzie lista zgłoszeń i funkcje dla operatora.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-blue-900 mb-2">
-                📋 Nowe zgłoszenia
-              </h3>
-              <p className="text-3xl font-bold text-blue-600">0</p>
-              <p className="text-sm text-blue-700 mt-2">
-                Czekają na Twoją ofertę
-              </p>
-            </div>
-
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-green-900 mb-2">
-                ✅ Aktywne zlecenia
-              </h3>
-              <p className="text-3xl font-bold text-green-600">0</p>
-              <p className="text-sm text-green-700 mt-2">
-                Zaakceptowane przez klientów
-              </p>
-            </div>
-
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-purple-900 mb-2">
-                📊 Ukończone dzisiaj
-              </h3>
-              <p className="text-3xl font-bold text-purple-600">0</p>
-              <p className="text-sm text-purple-700 mt-2">
-                Zakończone pomyślnie
-              </p>
-            </div>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Dostępne zgłoszenia
+            </h2>
+            <button
+              onClick={loadRequests}
+              disabled={loading}
+              className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+            >
+              {loading ? 'Ładowanie...' : '🔄 Odśwież'}
+            </button>
           </div>
 
-          <div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-yellow-900 mb-2">
-              🚧 W budowie
-            </h3>
-            <p className="text-yellow-800">
-              Panel operatora jest w fazie rozwoju. Wkrótce dostępne będą:
-            </p>
-            <ul className="list-disc list-inside mt-2 text-yellow-800 space-y-1">
-              <li>Lista przychodzących zgłoszeń</li>
-              <li>Wysyłanie ofert do klientów</li>
-              <li>Zarządzanie dostępnością</li>
-              <li>Aktualizacja lokalizacji GPS</li>
-              <li>Historia zleceń</li>
-            </ul>
-          </div>
+          {loading && requests.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Ładowanie zgłoszeń...</p>
+            </div>
+          ) : requests.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <p className="text-gray-600 text-lg">Brak dostępnych zgłoszeń</p>
+              <p className="text-gray-500 text-sm mt-2">
+                Nowe zgłoszenia pojawią się tutaj automatycznie
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {requests.map((request) => (
+                <div
+                  key={request.id}
+                  className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-bold text-gray-900">
+                          Zgłoszenie #{request.id.slice(0, 8)}
+                        </h3>
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded">
+                          {request.status === 'Pending' ? 'Oczekujące' : 'Szukanie'}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p>📞 {request.phoneNumber}</p>
+                        <p>📍 Dystans: {request.distance} km</p>
+                        {request.description && (
+                          <p className="mt-2 text-gray-700">{request.description}</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          Utworzono: {new Date(request.createdAt).toLocaleString('pl-PL')}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedRequest(request)}
+                      className="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                    >
+                      Wyślij ofertę
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* Offer Modal */}
+        {selectedRequest && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Wyślij ofertę
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cena (zł) *
+                  </label>
+                  <input
+                    type="number"
+                    value={offerPrice}
+                    onChange={(e) => setOfferPrice(e.target.value)}
+                    placeholder="150"
+                    min="0"
+                    step="0.01"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Szacowany czas (minuty)
+                  </label>
+                  <input
+                    type="number"
+                    value={offerTime}
+                    onChange={(e) => setOfferTime(e.target.value)}
+                    placeholder="30"
+                    min="0"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setSelectedRequest(null)
+                      setOfferPrice('')
+                      setOfferTime('')
+                    }}
+                    className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
+                  >
+                    Anuluj
+                  </button>
+                  <button
+                    onClick={handleSubmitOffer}
+                    disabled={submittingOffer || !offerPrice}
+                    className="flex-1 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                  >
+                    {submittingOffer ? 'Wysyłanie...' : 'Wyślij ofertę'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

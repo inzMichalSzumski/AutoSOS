@@ -8,6 +8,14 @@ export interface CreateRequestDto {
   toLatitude?: number;
   toLongitude?: number;
   description?: string;
+  requiredEquipmentId?: string;
+}
+
+export interface Equipment {
+  id: string;
+  name: string;
+  description: string;
+  requiresTransport: boolean;
 }
 
 export interface RequestResponse {
@@ -23,6 +31,8 @@ export interface OperatorResponse {
   phone: string;
   vehicleType: string;
   distance: number;
+  currentLatitude?: number;
+  currentLongitude?: number;
 }
 
 export interface OperatorsResponse {
@@ -88,8 +98,25 @@ class ApiClient {
     });
   }
 
+  async getEquipment(): Promise<{ equipment: Equipment[] }> {
+    return this.request<{ equipment: Equipment[] }>('/api/equipment', {
+      method: 'GET',
+    });
+  }
+
   async getRequest(id: string): Promise<any> {
     return this.request(`/api/requests/${id}`);
+  }
+
+  async cancelRequest(id: string, phoneNumber: string): Promise<{ id: string; status: string; message: string }> {
+    return this.request<{ id: string; status: string; message: string }>(`/api/requests/${id}/cancel`, {
+      method: 'PUT',
+      body: JSON.stringify({ phoneNumber }),
+    });
+  }
+
+  async getAvailableRequests(): Promise<{ requests: any[] }> {
+    return this.request<{ requests: any[] }>('/api/requests/available');
   }
 
   async getOperators(
