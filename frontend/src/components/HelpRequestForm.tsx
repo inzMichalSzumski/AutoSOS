@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap, ZoomControl, Polyline } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, useMap, ZoomControl, Polyline } from 'react-leaflet'
 import { Icon, DivIcon } from 'leaflet'
 import type { HelpRequest, Location } from '../types'
-import { searchAddresses, searchPOI, reverseGeocode, calculateDistance, getRoute, type GeocodingResult, type POIResult, type RoutePoint } from '../services/geocoding'
+import { type POIResult, type RoutePoint } from '../services/geocoding'
 import { apiClient, type OperatorResponse } from '../services/api'
 
 // Fix dla ikon Leaflet w Vite
@@ -62,7 +62,8 @@ function MapCenterTracker({
   onFromPositionChange,
   isSelectingStart,
   routeCoordinates,
-  nearbyOperators
+  nearbyOperators,
+  shouldUpdateLocation
 }: { 
   fromPosition: Location | null
   toPosition: Location | null
@@ -70,12 +71,13 @@ function MapCenterTracker({
   isSelectingStart: boolean
   routeCoordinates: RoutePoint[]
   nearbyOperators: OperatorResponse[]
+  shouldUpdateLocation: () => boolean
 }) {
   const map = useMap()
   
   useEffect(() => {
     const updateLocation = () => {
-      if (isSelectingStart) {
+      if (isSelectingStart && shouldUpdateLocation()) {
         const center = map.getCenter()
         onFromPositionChange({ lat: center.lat, lng: center.lng })
       }
@@ -90,7 +92,7 @@ function MapCenterTracker({
     return () => {
       map.off('moveend', updateLocation)
     }
-  }, [map, isSelectingStart, onFromPositionChange])
+  }, [map, isSelectingStart, onFromPositionChange, shouldUpdateLocation])
 
   return (
     <>
@@ -184,12 +186,6 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   ) // Warszawa lub lokalizacja początkowa
   const [isSubmitting, setIsSubmitting] = useState(false)
   
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<(GeocodingResult | POIResult)[]>([])
-  const [showResults, setShowResults] = useState(false)
-  const [isSearching, setIsSearching] = useState(false)
-  const [searchMode] = useState<'address' | 'poi'>('address') // Always use address mode - POI search removed
   const [poiMarkers, setPoiMarkers] = useState<POIResult[]>([])
   const [showFormPanel, setShowFormPanel] = useState(false)
   const [isSelectingStart, setIsSelectingStart] = useState(false) // Tryb wyboru lokalizacji startowej
@@ -199,9 +195,8 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   const [routeDuration, setRouteDuration] = useState<number | null>(null) // Czas trasy w sekundach
   const [nearbyOperators, setNearbyOperators] = useState<OperatorResponse[]>([]) // Najbliżsi operatorzy
   
-  const searchInputRef = useRef<HTMLInputElement>(null)
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
   const watchPositionIdRef = useRef<number | null>(null) // ID watchPosition do zatrzymania
+  const isUpdatingFromGPSRef = useRef<boolean>(false) // Flaga wskazująca, że aktualizujemy lokalizację z GPS
 
   // Ustaw początkową lokalizację i centrum mapy jeśli są przekazane
   useEffect(() => {
@@ -272,6 +267,9 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
       maximumAge: 60000, // Akceptuj pozycję starszą niż 1 minuta
     }
 
+    // Ustaw flagę, że aktualizujemy lokalizację z GPS
+    isUpdatingFromGPSRef.current = true
+    
     // Najpierw pobierz aktualną pozycję
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -284,6 +282,10 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         setLocationError(null)
         setIsSelectingStart(false)
         setIsFromLocationFromGPS(true) // Oznacz że lokalizacja jest z GPS
+        // Zresetuj flagę po zaktualizowaniu lokalizacji
+        setTimeout(() => {
+          isUpdatingFromGPSRef.current = false
+        }, 100)
         console.log('Geolokalizacja udana:', loc)
 
         // Rozpocznij śledzenie zmian lokalizacji w czasie rzeczywistym
@@ -328,9 +330,15 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         setLocationError(errorMessage)
         console.error('Błąd geolokalizacji:', error.code, error.message)
         
+        // Zresetuj flagę jeśli nie ma fallback
+        if (error.code !== error.TIMEOUT) {
+          isUpdatingFromGPSRef.current = false
+        }
+        
         // Fallback: spróbuj użyć mniej precyzyjnej lokalizacji
         if (error.code === error.TIMEOUT) {
           console.log('Próba użycia mniej precyzyjnej lokalizacji...')
+          isUpdatingFromGPSRef.current = true
           navigator.geolocation.getCurrentPosition(
             (position) => {
               const loc = {
@@ -341,6 +349,10 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               setMapCenter([loc.lat, loc.lng])
               setLocationError(null)
               setIsFromLocationFromGPS(true) // Oznacz że lokalizacja jest z GPS
+              // Zresetuj flagę po zaktualizowaniu lokalizacji
+              setTimeout(() => {
+                isUpdatingFromGPSRef.current = false
+              }, 100)
               console.log('Geolokalizacja udana (fallback):', loc)
 
               // Rozpocznij śledzenie zmian lokalizacji w czasie rzeczywistym
@@ -384,65 +396,6 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
     )
   }
 
-  // Handle search input with debounce
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-
-    if (!searchQuery.trim()) {
-      setSearchResults([])
-      setShowResults(false)
-      setPoiMarkers([])
-      return
-    }
-
-    searchTimeoutRef.current = setTimeout(async () => {
-      setIsSearching(true)
-      try {
-        if (searchMode === 'address') {
-          const results = await searchAddresses(searchQuery, 10) // Pobierz więcej wyników do sortowania
-          
-          // Jeśli znana jest lokalizacja użytkownika, sortuj wyniki według odległości
-          let sortedResults = results
-          if (fromLocation) {
-            sortedResults = results
-              .map(result => ({
-                ...result,
-                distance: calculateDistance(
-                  fromLocation.lat,
-                  fromLocation.lng,
-                  result.lat,
-                  result.lon
-                )
-              }))
-              .sort((a, b) => (a.distance || 0) - (b.distance || 0))
-              .slice(0, 5) // Weź 5 najbliższych
-          }
-          
-          setSearchResults(sortedResults)
-          setShowResults(true)
-        } else {
-          // POI search
-          const center = fromLocation || { lat: mapCenter[0], lng: mapCenter[1] }
-          const results = await searchPOI(searchQuery, center.lat, center.lng, 10000, 10)
-          setSearchResults(results)
-          setPoiMarkers(results)
-          setShowResults(true)
-        }
-      } catch (error) {
-        console.error('Search error:', error)
-      } finally {
-        setIsSearching(false)
-      }
-    }, 300)
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-    }
-  }, [searchQuery, searchMode, fromLocation, mapCenter])
 
   // Cleanup: zatrzymaj śledzenie GPS przy odmontowaniu komponentu
   useEffect(() => {
@@ -454,17 +407,6 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
     }
   }, [])
 
-  const handleSearchResultClick = (result: GeocodingResult | POIResult) => {
-    const loc = { lat: result.lat, lng: result.lon }
-    
-    // Wyszukiwanie zawsze ustawia lokalizację docelową
-    setToLocation(loc)
-    setMapCenter([loc.lat, loc.lng])
-    
-    setSearchQuery('')
-    setShowResults(false)
-    setPoiMarkers([])
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -536,6 +478,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
             isSelectingStart={isSelectingStart || !fromLocation}
             routeCoordinates={routeCoordinates}
             nearbyOperators={nearbyOperators}
+            shouldUpdateLocation={() => !isUpdatingFromGPSRef.current}
           />
           {/* Fit bounds when both locations are set */}
           {fromLocation && toLocation && (
@@ -608,62 +551,6 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         </div>
       )}
 
-      {/* Top Search Bar */}
-      <div className={`absolute left-4 right-20 z-10 max-w-2xl ${locationError ? 'top-24' : 'top-4'}`}>
-        <div className="bg-white rounded-lg shadow-xl p-2">
-          {/* Search Input */}
-          <div className="relative">
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setShowResults(true)}
-              placeholder="Dokąd chcesz się udać?"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-            />
-              
-            {/* Search Results Dropdown */}
-            {showResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 max-h-64 overflow-y-auto z-30">
-                {searchResults.map((result, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleSearchResultClick(result)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition"
-                    >
-                      <div className="font-medium text-gray-900">{result.display_name}</div>
-                      <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                        <span>{result.type}</span>
-                        {(result as any).distance !== undefined && fromLocation && (
-                          <>
-                            <span>•</span>
-                            <span className="font-medium text-primary-600">
-                              {(result as any).distance.toFixed(1)} km
-                            </span>
-                          </>
-                        )}
-                        {(!fromLocation || (result as any).distance === undefined) && (
-                          <>
-                            <span>•</span>
-                            <span>{result.lat.toFixed(4)}, {result.lon.toFixed(4)}</span>
-                          </>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-            {isSearching && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-30">
-                <div className="text-center text-gray-500">Szukanie...</div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* Confirm Location Button - pokazuje się gdy wybieramy lokalizację startową */}
       {isSelectingStart && (
@@ -778,10 +665,8 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               <button
                 type="button"
                 onClick={() => {
-                  // Skup się na polu wyszukiwania, aby użytkownik mógł wpisać adres docelowy
-                  if (searchInputRef.current) {
-                    searchInputRef.current.focus()
-                  }
+                  // TODO: Dodać sposób ustawiania punktu docelowego
+                  alert('Kliknij na mapie, aby ustawić punkt docelowy')
                 }}
                 className="text-xs text-primary-600 hover:text-primary-700 font-medium"
                 title="Ustaw punkt docelowy"
@@ -976,18 +861,6 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         </div>
       )}
 
-      {/* Click outside to close search results */}
-      {showResults && (
-        <div
-          className="fixed inset-0 z-[5]"
-          onClick={() => {
-            setShowResults(false)
-            if (searchInputRef.current) {
-              searchInputRef.current.blur()
-            }
-          }}
-        />
-      )}
     </div>
   )
 }
