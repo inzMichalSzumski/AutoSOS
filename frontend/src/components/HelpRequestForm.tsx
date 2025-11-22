@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { MapContainer, TileLayer, Marker, useMap, ZoomControl, Polyline } from 'react-leaflet'
 import { Icon, DivIcon } from 'leaflet'
 import type { HelpRequest, Location } from '../types'
-import { type POIResult, type RoutePoint } from '../services/geocoding'
+import { type POIResult, type RoutePoint, getRoute, calculateDistance } from '../services/geocoding'
 import { apiClient, type OperatorResponse } from '../services/api'
 
 // Fix dla ikon Leaflet w Vite
@@ -60,7 +60,9 @@ function MapCenterTracker({
   fromPosition, 
   toPosition,
   onFromPositionChange,
+  onToPositionChange,
   isSelectingStart,
+  isSelectingDestination,
   routeCoordinates,
   nearbyOperators,
   shouldUpdateLocation
@@ -68,7 +70,9 @@ function MapCenterTracker({
   fromPosition: Location | null
   toPosition: Location | null
   onFromPositionChange: (loc: Location) => void
+  onToPositionChange: (loc: Location) => void
   isSelectingStart: boolean
+  isSelectingDestination: boolean
   routeCoordinates: RoutePoint[]
   nearbyOperators: OperatorResponse[]
   shouldUpdateLocation: () => boolean
@@ -79,7 +83,21 @@ function MapCenterTracker({
     const updateLocation = () => {
       if (isSelectingStart && shouldUpdateLocation()) {
         const center = map.getCenter()
-        onFromPositionChange({ lat: center.lat, lng: center.lng })
+        // Sprawdź, czy lokalizacja faktycznie się zmieniła (unikaj niepotrzebnych aktualizacji)
+        if (!fromPosition || 
+            Math.abs(fromPosition.lat - center.lat) > 0.0001 || 
+            Math.abs(fromPosition.lng - center.lng) > 0.0001) {
+          onFromPositionChange({ lat: center.lat, lng: center.lng })
+        }
+      }
+      if (isSelectingDestination && shouldUpdateLocation()) {
+        const center = map.getCenter()
+        // Sprawdź, czy lokalizacja faktycznie się zmieniła (unikaj niepotrzebnych aktualizacji)
+        if (!toPosition || 
+            Math.abs(toPosition.lat - center.lat) > 0.0001 || 
+            Math.abs(toPosition.lng - center.lng) > 0.0001) {
+          onToPositionChange({ lat: center.lat, lng: center.lng })
+        }
       }
     }
 
@@ -92,13 +110,14 @@ function MapCenterTracker({
     return () => {
       map.off('moveend', updateLocation)
     }
-  }, [map, isSelectingStart, onFromPositionChange, shouldUpdateLocation])
+  }, [map, isSelectingStart, isSelectingDestination, fromPosition, toPosition, onFromPositionChange, onToPositionChange, shouldUpdateLocation])
 
   return (
     <>
       {/* Pinezka startowa - pokazuj tylko gdy nie wybieramy lokalizacji */}
       {fromPosition && !isSelectingStart && <Marker position={[fromPosition.lat, fromPosition.lng]} icon={DefaultIcon} />}
-      {toPosition && <Marker position={[toPosition.lat, toPosition.lng]} icon={DestinationIcon} />}
+      {/* Pinezka docelowa - pokazuj tylko gdy nie wybieramy lokalizacji docelowej */}
+      {toPosition && !isSelectingDestination && <Marker position={[toPosition.lat, toPosition.lng]} icon={DestinationIcon} />}
       {/* Trasa po ulicach - pokazuj tylko gdy oba są ustawione i mamy współrzędne trasy */}
       {fromPosition && toPosition && routeCoordinates.length > 0 && (
         <Polyline
@@ -122,7 +141,7 @@ function MapCenterTracker({
         />
       )}
       {/* Markery operatorów - pokazuj tylko gdy nie wybieramy lokalizacji */}
-      {!isSelectingStart && nearbyOperators.map((operator) => (
+      {!isSelectingStart && !isSelectingDestination && nearbyOperators.map((operator) => (
         operator.currentLatitude && operator.currentLongitude && (
           <Marker
             key={operator.id}
@@ -144,32 +163,38 @@ function MapCenter({ center }: { center: [number, number] }) {
   return null
 }
 
-// Component to fit map bounds to show both points
-function MapBounds({ fromLocation, toLocation }: { fromLocation: Location | null, toLocation: Location | null }) {
+// Component to fit map bounds to show both points and route
+function MapBounds({ fromLocation, toLocation, routeCoordinates }: { fromLocation: Location | null, toLocation: Location | null, routeCoordinates: RoutePoint[] }) {
   const map = useMap()
   
   useEffect(() => {
     if (fromLocation && toLocation) {
-      const bounds = L.latLngBounds(
-        [fromLocation.lat, fromLocation.lng],
-        [toLocation.lat, toLocation.lng]
-      )
-      // Padding: [top, right, bottom, left]
-      // Top padding większy aby pasek wyszukiwarki nie zasłaniał mety
-      // Umiarkowane powiększenie (pomiędzy poprzednim a obecnym)
-      map.fitBounds(bounds, { 
-        paddingTopLeft: [50, 100],
-        paddingBottomRight: [50, 50]
-      } as L.FitBoundsOptions)
-      
-      // Lekko zmniejsz zoom (około 15% - pomiędzy poprzednim a obecnym)
-      setTimeout(() => {
-        const currentZoom = map.getZoom()
-        const newZoom = Math.max(currentZoom - 1, 5) // Zmniejsz zoom o 1 poziom
-        map.setZoom(newZoom)
-      }, 100)
+      // Jeśli mamy współrzędne trasy, użyj ich do ustawienia bounds
+      if (routeCoordinates.length > 0) {
+        const bounds = L.latLngBounds(
+          routeCoordinates.map(coord => [coord.lat, coord.lng] as [number, number])
+        )
+        // Dodaj również punkty startowy i docelowy na wypadek, gdyby były poza trasą
+        bounds.extend([fromLocation.lat, fromLocation.lng])
+        bounds.extend([toLocation.lat, toLocation.lng])
+        
+        map.fitBounds(bounds, { 
+          paddingTopLeft: [100, 50],
+          paddingBottomRight: [150, 50]
+        } as L.FitBoundsOptions)
+      } else {
+        // Jeśli nie ma trasy, użyj tylko punktów
+        const bounds = L.latLngBounds(
+          [fromLocation.lat, fromLocation.lng],
+          [toLocation.lat, toLocation.lng]
+        )
+        map.fitBounds(bounds, { 
+          paddingTopLeft: [100, 50],
+          paddingBottomRight: [150, 50]
+        } as L.FitBoundsOptions)
+      }
     }
-  }, [map, fromLocation, toLocation])
+  }, [map, fromLocation, toLocation, routeCoordinates])
   
   return null
 }
@@ -189,6 +214,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   const [poiMarkers, setPoiMarkers] = useState<POIResult[]>([])
   const [showFormPanel, setShowFormPanel] = useState(false)
   const [isSelectingStart, setIsSelectingStart] = useState(false) // Tryb wyboru lokalizacji startowej
+  const [isSelectingDestination, setIsSelectingDestination] = useState(false) // Tryb wyboru lokalizacji docelowej
   const [isFromLocationFromGPS, setIsFromLocationFromGPS] = useState(false) // Czy punkt startowy jest z geolokalizacji
   const [routeDistance, setRouteDistance] = useState<number | null>(null) // Dystans między punktami
   const [routeCoordinates, setRouteCoordinates] = useState<RoutePoint[]>([]) // Współrzędne trasy
@@ -197,6 +223,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   
   const watchPositionIdRef = useRef<number | null>(null) // ID watchPosition do zatrzymania
   const isUpdatingFromGPSRef = useRef<boolean>(false) // Flaga wskazująca, że aktualizujemy lokalizację z GPS
+  const panelRef = useRef<HTMLDivElement>(null) // Ref do panelu z lokalizacjami
 
   // Ustaw początkową lokalizację i centrum mapy jeśli są przekazane
   useEffect(() => {
@@ -208,7 +235,6 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
       getCurrentLocation()
     }
   }, [initialFromLocation])
-
 
   // Automatycznie włącz tryb wyboru na mapie, jeśli nie ma lokalizacji startowej
   useEffect(() => {
@@ -245,6 +271,59 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
 
     loadNearbyOperators()
   }, [fromLocation, isSelectingStart])
+
+  // Oblicz trasę i dystans gdy oba punkty są ustawione
+  useEffect(() => {
+    const calculateRoute = async () => {
+      // Obliczaj trasę tylko gdy oba punkty są ustawione i nie wybieramy lokalizacji
+      if (fromLocation && toLocation && !isSelectingStart && !isSelectingDestination) {
+        try {
+          const route = await getRoute(
+            fromLocation.lat,
+            fromLocation.lng,
+            toLocation.lat,
+            toLocation.lng
+          )
+          
+          if (route) {
+            setRouteCoordinates(route.coordinates)
+            setRouteDistance(route.distance)
+            setRouteDuration(route.duration)
+          } else {
+            // Jeśli nie udało się pobrać trasy, oblicz dystans w linii prostej
+            const distance = calculateDistance(
+              fromLocation.lat,
+              fromLocation.lng,
+              toLocation.lat,
+              toLocation.lng
+            )
+            setRouteCoordinates([])
+            setRouteDistance(distance)
+            setRouteDuration(null)
+          }
+        } catch (error) {
+          console.error('Error calculating route:', error)
+          // W przypadku błędu, oblicz dystans w linii prostej
+          const distance = calculateDistance(
+            fromLocation.lat,
+            fromLocation.lng,
+            toLocation.lat,
+            toLocation.lng
+          )
+          setRouteCoordinates([])
+          setRouteDistance(distance)
+          setRouteDuration(null)
+        }
+      } else {
+        // Wyczyść trasę gdy nie ma obu punktów
+        setRouteCoordinates([])
+        setRouteDistance(null)
+        setRouteDuration(null)
+      }
+    }
+
+    calculateRoute()
+  }, [fromLocation, toLocation, isSelectingStart, isSelectingDestination])
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -436,64 +515,159 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   }
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
-      {/* Crosshair - pinezka w centrum mapy wskazująca lokalizację */}
-      {isSelectingStart && (
-        <div className="absolute top-1/2 left-1/2 z-30 pointer-events-none" style={{ transform: 'translate(-12px, -41px)' }}>
-          <img
-            src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png"
-            alt=""
-            className="w-[25px] h-[41px] drop-shadow-lg"
-            style={{ imageRendering: 'crisp-edges' }}
-          />
-        </div>
-      )}
-
-      {/* Fullscreen Map */}
-      <div className="absolute inset-0 z-0">
-        <MapContainer
-          center={mapCenter}
-          zoom={13}
-          style={{ height: '100%', width: '100%' }}
-          zoomControl={false}
-        >
-          <MapCenter center={mapCenter} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <ZoomControl position="topright" />
-          <MapCenterTracker
-            fromPosition={fromLocation}
-            toPosition={toLocation}
-            onFromPositionChange={(loc) => {
-              setFromLocation(loc)
-              setIsFromLocationFromGPS(false) // Oznacz że lokalizacja jest ustawiona ręcznie
-              // Zatrzymaj śledzenie GPS gdy użytkownik ustawia lokalizację ręcznie
-              if (watchPositionIdRef.current !== null) {
-                navigator.geolocation.clearWatch(watchPositionIdRef.current)
-                watchPositionIdRef.current = null
-              }
-            }}
-            isSelectingStart={isSelectingStart || !fromLocation}
-            routeCoordinates={routeCoordinates}
-            nearbyOperators={nearbyOperators}
-            shouldUpdateLocation={() => !isUpdatingFromGPSRef.current}
-          />
-          {/* Fit bounds when both locations are set */}
-          {fromLocation && toLocation && (
-            <MapBounds fromLocation={fromLocation} toLocation={toLocation} />
+    <div className="flex flex-col w-full h-screen overflow-hidden">
+      {/* Distance Info Panel - zawsze widoczny, przytwierdzony na górze */}
+      <div ref={panelRef} className="bg-white shadow-xl p-3 z-20">
+        {/* Start Location */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium text-gray-500">Punkt startowy</label>
+            {fromLocation && (
+              <div className="flex items-center gap-2">
+                {!isFromLocationFromGPS && (
+                  <button
+                    type="button"
+                    onClick={getCurrentLocation}
+                    className="text-primary-600 hover:text-primary-700 transition"
+                    title="Odśwież lokalizację GPS"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSelectingDestination(false) // Wyłącz wybór miejsca docelowego
+                    setIsSelectingStart(true)
+                    setFromLocation(null)
+                    setIsFromLocationFromGPS(false)
+                    // Zatrzymaj śledzenie GPS gdy użytkownik edytuje lokalizację
+                    if (watchPositionIdRef.current !== null) {
+                      navigator.geolocation.clearWatch(watchPositionIdRef.current)
+                      watchPositionIdRef.current = null
+                    }
+                  }}
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  title="Zmień punkt startowy"
+                >
+                  Edytuj
+                </button>
+              </div>
+            )}
+          </div>
+          {fromLocation ? (
+            <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5">
+              {fromLocation.lat.toFixed(4)}, {fromLocation.lng.toFixed(4)}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
+              Nie ustawiono
+            </div>
           )}
-          {/* POI Markers */}
-          {poiMarkers.map((poi, idx) => (
-            <Marker key={idx} position={[poi.lat, poi.lon]} icon={POIIcon} />
-          ))}
-        </MapContainer>
+        </div>
+
+        {/* Destination Location */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium text-gray-500">Punkt docelowy</label>
+            {toLocation ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSelectingStart(false) // Wyłącz wybór miejsca startowego
+                  setIsSelectingDestination(true)
+                }}
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                title="Zmień punkt docelowy"
+              >
+                Edytuj
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSelectingStart(false) // Wyłącz wybór miejsca startowego
+                  setIsSelectingDestination(true)
+                }}
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                title="Ustaw punkt docelowy"
+              >
+                Ustaw
+              </button>
+            )}
+          </div>
+          {toLocation ? (
+            <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5">
+              {toLocation.lat.toFixed(4)}, {toLocation.lng.toFixed(4)}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
+              Nie ustawiono
+            </div>
+          )}
+        </div>
+
+        {/* Distance Info */}
+        {routeDistance !== null && fromLocation && toLocation ? (
+          <div className="pt-2 border-t border-gray-200">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-primary-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                <span className="text-lg font-bold text-primary-600">
+                  {routeDistance.toFixed(1)} km
+                </span>
+              </div>
+              {routeDuration && (
+                <span className="text-sm text-gray-600">
+                  ~{Math.round(routeDuration / 60)} min
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {routeCoordinates.length > 0 ? 'Trasa po ulicach' : 'Odległość w linii prostej'}
+            </p>
+          </div>
+        ) : (
+          <div className="pt-2 border-t border-gray-200">
+            <p className="text-sm text-gray-400 text-center py-2">
+              Ustaw oba punkty, aby zobaczyć dystans
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Location Error Banner */}
-      {locationError && (
-        <div className="absolute top-4 left-4 right-20 z-20 bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-lg mb-2">
+      {/* Map Container - relative dla crosshair i innych elementów */}
+      <div className="relative flex-1 z-10">
+        {/* Location Error Banner */}
+        {locationError && (
+          <div className="absolute top-4 left-4 right-20 z-20 bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-lg mb-2">
           <div className="flex items-start gap-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -551,6 +725,74 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         </div>
       )}
 
+        {/* Crosshair - pinezka w centrum mapy wskazująca lokalizację */}
+        {isSelectingStart && (
+          <div className="absolute top-1/2 left-1/2 z-50 pointer-events-none" style={{ transform: 'translate(-12px, -41px)' }}>
+            <img
+              src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png"
+              alt=""
+              className="w-[25px] h-[41px] drop-shadow-lg"
+              style={{ imageRendering: 'crisp-edges' }}
+            />
+          </div>
+        )}
+        {isSelectingDestination && (
+          <div className="absolute top-1/2 left-1/2 z-50 pointer-events-none" style={{ transform: 'translate(-50%, -50%)' }}>
+            <div style={{ 
+              fontSize: '40px', 
+              lineHeight: 1, 
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
+              textShadow: '0 0 10px rgba(255,255,255,0.8)'
+            }}>🏁</div>
+          </div>
+        )}
+
+        {/* Fullscreen Map */}
+        <div className="absolute inset-0 z-0">
+          <MapContainer
+            center={mapCenter}
+            zoom={13}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={false}
+          >
+            <MapCenter center={mapCenter} />
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <ZoomControl position="topright" />
+            <MapCenterTracker
+              fromPosition={fromLocation}
+              toPosition={toLocation}
+              onFromPositionChange={(loc) => {
+                setFromLocation(loc)
+                setIsFromLocationFromGPS(false) // Oznacz że lokalizacja jest ustawiona ręcznie
+                // Zatrzymaj śledzenie GPS gdy użytkownik ustawia lokalizację ręcznie
+                if (watchPositionIdRef.current !== null) {
+                  navigator.geolocation.clearWatch(watchPositionIdRef.current)
+                  watchPositionIdRef.current = null
+                }
+              }}
+              onToPositionChange={(loc) => {
+                setToLocation(loc)
+              }}
+              isSelectingStart={isSelectingStart || !fromLocation}
+              isSelectingDestination={isSelectingDestination}
+              routeCoordinates={routeCoordinates}
+              nearbyOperators={nearbyOperators}
+              shouldUpdateLocation={() => !isUpdatingFromGPSRef.current}
+            />
+            {/* Fit bounds when both locations are set - tylko gdy nie wybieramy lokalizacji */}
+            {fromLocation && toLocation && !isSelectingStart && !isSelectingDestination && (
+              <MapBounds fromLocation={fromLocation} toLocation={toLocation} routeCoordinates={routeCoordinates} />
+            )}
+            {/* POI Markers */}
+            {poiMarkers.map((poi, idx) => (
+              <Marker key={idx} position={[poi.lat, poi.lon]} icon={POIIcon} />
+            ))}
+          </MapContainer>
+        </div>
+      </div>
 
       {/* Confirm Location Button - pokazuje się gdy wybieramy lokalizację startową */}
       {isSelectingStart && (
@@ -580,148 +822,34 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         </div>
       )}
 
-      {/* Distance Info Panel - zawsze widoczny */}
-      <div className={`absolute ${locationError ? 'top-24' : 'top-4'} right-4 z-20 bg-white rounded-lg shadow-xl p-4 max-w-xs`}>
-        {/* Start Location */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-medium text-gray-500">Punkt startowy</label>
-            {fromLocation && (
-              <div className="flex items-center gap-2">
-                {!isFromLocationFromGPS && (
-                  <button
-                    type="button"
-                    onClick={getCurrentLocation}
-                    className="text-primary-600 hover:text-primary-700 transition"
-                    title="Odśwież lokalizację GPS"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSelectingStart(true)
-                    setFromLocation(null)
-                    setIsFromLocationFromGPS(false)
-                    // Zatrzymaj śledzenie GPS gdy użytkownik edytuje lokalizację
-                    if (watchPositionIdRef.current !== null) {
-                      navigator.geolocation.clearWatch(watchPositionIdRef.current)
-                      watchPositionIdRef.current = null
-                    }
-                  }}
-                  className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                  title="Zmień punkt startowy"
-                >
-                  Edytuj
-                </button>
-              </div>
-            )}
-          </div>
-          {fromLocation ? (
-            <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5">
-              {fromLocation.lat.toFixed(4)}, {fromLocation.lng.toFixed(4)}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
-              Nie ustawiono
-            </div>
-          )}
+      {/* Confirm Destination Button - pokazuje się gdy wybieramy lokalizację docelową */}
+      {isSelectingDestination && (
+        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20">
+          <button
+            type="button"
+            onClick={() => {
+              setIsSelectingDestination(false)
+            }}
+            className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-full shadow-xl transition flex items-center gap-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Ustaw tutaj
+          </button>
         </div>
+      )}
 
-        {/* Destination Location */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-medium text-gray-500">Punkt docelowy</label>
-            {toLocation ? (
-              <button
-                type="button"
-                onClick={() => setToLocation(null)}
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                title="Zmień punkt docelowy"
-              >
-                Edytuj
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  // TODO: Dodać sposób ustawiania punktu docelowego
-                  alert('Kliknij na mapie, aby ustawić punkt docelowy')
-                }}
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                title="Ustaw punkt docelowy"
-              >
-                Ustaw
-              </button>
-            )}
-          </div>
-          {toLocation ? (
-            <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5">
-              {toLocation.lat.toFixed(4)}, {toLocation.lng.toFixed(4)}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
-              Nie ustawiono
-            </div>
-          )}
-        </div>
 
-        {/* Distance Info */}
-        {routeDistance !== null && fromLocation && toLocation ? (
-          <>
-            <div className="flex items-center gap-2 mb-2 pt-2 border-t border-gray-200">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-primary-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              <h3 className="font-semibold text-gray-900">Dystans</h3>
-            </div>
-            <p className="text-2xl font-bold text-primary-600 mb-1">
-              {routeDistance.toFixed(1)} km
-            </p>
-            {routeDuration && (
-              <p className="text-sm text-gray-600 mb-1">
-                ~{Math.round(routeDuration / 60)} min jazdy
-              </p>
-            )}
-            <p className="text-xs text-gray-500 mb-3">
-              {routeCoordinates.length > 0 ? 'Trasa po ulicach' : 'Odległość w linii prostej'}
-            </p>
-          </>
-        ) : (
-          <div className="pt-2 border-t border-gray-200">
-            <p className="text-sm text-gray-400 text-center py-2">
-              Ustaw oba punkty, aby zobaczyć dystans
-            </p>
-          </div>
-        )}
 
-        {/* Call for Help Button */}
+      {/* Call for Help Button - Large button at bottom */}
+      <div className={`absolute left-4 right-4 z-20 ${showFormPanel ? 'bottom-[40vh]' : 'bottom-4'}`}>
         <button
           type="button"
           onClick={() => {
@@ -739,15 +867,14 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
             })
           }}
           disabled={!fromLocation}
-          className="w-full bg-danger-600 hover:bg-danger-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition duration-200 transform hover:scale-105 disabled:transform-none shadow-lg"
+          className="w-full bg-danger-600 hover:bg-danger-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-xl text-lg transition duration-200 transform hover:scale-105 disabled:transform-none shadow-2xl"
         >
           🚨 Wezwij pomoc
         </button>
       </div>
 
-
       {/* Floating Action Buttons */}
-      <div className="absolute bottom-24 right-4 z-10 flex flex-col gap-3">
+      <div className={`absolute right-4 z-10 flex flex-col gap-3 ${showFormPanel ? 'bottom-[calc(40vh+80px)]' : 'bottom-24'}`}>
         {/* Locate Me Button */}
         <button
           type="button"
