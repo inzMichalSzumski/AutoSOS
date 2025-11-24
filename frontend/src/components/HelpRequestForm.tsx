@@ -515,11 +515,11 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   }
 
   return (
-    <div className="flex flex-col w-full h-screen overflow-hidden">
+    <div className="flex flex-col w-full h-[100dvh] overflow-hidden">
       {/* Distance Info Panel - zawsze widoczny, przytwierdzony na górze */}
-      <div ref={panelRef} className="bg-white shadow-xl p-3 z-20">
+      <div ref={panelRef} className="bg-white shadow-xl p-2 z-20">
         {/* Start Location */}
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-2 flex items-center gap-2">
           <span className="text-lg flex-shrink-0" title="Punkt startowy">▶️</span>
           <div className="flex-1 min-w-0">
             {fromLocation ? (
@@ -583,7 +583,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
         </div>
 
         {/* Destination Location */}
-        <div className="mb-3 flex items-center gap-2">
+        <div className="mb-2 flex items-center gap-2">
           <span className="text-lg flex-shrink-0" title="Punkt docelowy">🏁</span>
           <div className="flex-1 min-w-0">
             {toLocation ? (
@@ -779,7 +779,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
 
       {/* Confirm Location Button - pokazuje się gdy wybieramy lokalizację startową */}
       {isSelectingStart && (
-        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20">
+        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <button
             type="button"
             onClick={() => {
@@ -807,7 +807,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
 
       {/* Confirm Destination Button - pokazuje się gdy wybieramy lokalizację docelową */}
       {isSelectingDestination && (
-        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20">
+        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <button
             type="button"
             onClick={() => {
@@ -832,7 +832,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
 
 
       {/* Call for Help Button - Large button at bottom */}
-      <div className={`absolute left-4 right-4 z-20 ${showFormPanel ? 'bottom-[40vh]' : 'bottom-4'}`}>
+      <div className={`absolute left-4 right-4 z-20 ${showFormPanel ? 'bottom-[40vh]' : 'bottom-4'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <button
           type="button"
           onClick={() => {
@@ -857,7 +857,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
       </div>
 
       {/* Floating Action Buttons */}
-      <div className={`absolute right-4 z-10 flex flex-col gap-3 ${showFormPanel ? 'bottom-[calc(40vh+80px)]' : 'bottom-24'}`}>
+      <div className={`absolute right-4 z-10 flex flex-col gap-3 ${showFormPanel ? 'bottom-[calc(40vh+80px)]' : 'bottom-24'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {/* Locate Me Button */}
         <button
           type="button"
