@@ -42,7 +42,7 @@ public static class OperatorEndpoints
                     ),
                     op.ServiceRadiusKm
                 })
-                .Where(op => op.Distance <= radius && op.Distance <= (op.ServiceRadiusKm ?? 20))
+                .Where(op => op.Distance <= radius) // Show operators within user's search radius
                 .OrderBy(op => op.Distance)
                 .Select(op => new
                 {
