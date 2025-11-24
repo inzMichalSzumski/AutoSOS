@@ -779,7 +779,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
 
       {/* Confirm Location Button - pokazuje się gdy wybieramy lokalizację startową */}
       {isSelectingStart && (
-        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-20">
           <button
             type="button"
             onClick={() => {
@@ -807,7 +807,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
 
       {/* Confirm Destination Button - pokazuje się gdy wybieramy lokalizację docelową */}
       {isSelectingDestination && (
-        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-20">
           <button
             type="button"
             onClick={() => {
@@ -832,7 +832,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
 
 
       {/* Call for Help Button - Large button at bottom */}
-      <div className={`absolute left-4 right-4 z-20 ${showFormPanel ? 'bottom-[40vh]' : 'bottom-4'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className={`absolute left-4 right-4 z-20 ${showFormPanel ? 'bottom-[40vh]' : 'bottom-20'}`}>
         <button
           type="button"
           onClick={() => {
@@ -857,7 +857,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
       </div>
 
       {/* Floating Action Buttons */}
-      <div className={`absolute right-4 z-10 flex flex-col gap-3 ${showFormPanel ? 'bottom-[calc(40vh+80px)]' : 'bottom-24'}`} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className={`absolute right-4 z-10 flex flex-col gap-3 ${showFormPanel ? 'bottom-[calc(40vh+80px)]' : 'bottom-36'}`}>
         {/* Locate Me Button */}
         <button
           type="button"
