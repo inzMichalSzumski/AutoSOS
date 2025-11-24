@@ -775,11 +775,10 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
             ))}
           </MapContainer>
         </div>
-      </div>
 
-      {/* Confirm Location Button - pokazuje się gdy wybieramy lokalizację startową */}
-      {isSelectingStart && (
-        <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-20">
+        {/* Confirm Location Button - pokazuje się gdy wybieramy lokalizację startową */}
+        {isSelectingStart && (
+          <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-20">
           <button
             type="button"
             onClick={() => {
@@ -803,12 +802,12 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
             Ustaw tutaj
           </button>
         </div>
-      )}
+        )}
 
-      {/* Confirm Destination Button - pokazuje się gdy wybieramy lokalizację docelową */}
-      {isSelectingDestination && (
-        <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-20">
-          <button
+        {/* Confirm Destination Button - pokazuje się gdy wybieramy lokalizację docelową */}
+        {isSelectingDestination && (
+          <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-20">
+            <button
             type="button"
             onClick={() => {
               setIsSelectingDestination(false)
@@ -825,15 +824,13 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
             Ustaw tutaj
-          </button>
-        </div>
-      )}
+            </button>
+          </div>
+        )}
 
-
-
-      {/* Call for Help Button - Large button at bottom */}
-      <div className={`absolute left-4 right-4 z-20 ${showFormPanel ? 'bottom-[40vh]' : 'bottom-20'}`}>
-        <button
+        {/* Call for Help Button - Large button at bottom */}
+        <div className={`absolute left-4 right-4 z-20 ${showFormPanel ? 'bottom-[40vh]' : 'bottom-4'}`}>
+          <button
           type="button"
           onClick={() => {
             if (!fromLocation) {
@@ -853,13 +850,13 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
           className="w-full bg-danger-600 hover:bg-danger-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-xl text-lg transition duration-200 transform hover:scale-105 disabled:transform-none shadow-2xl"
         >
           🚨 Wezwij pomoc
-        </button>
-      </div>
+          </button>
+        </div>
 
-      {/* Floating Action Buttons */}
-      <div className={`absolute right-4 z-10 flex flex-col gap-3 ${showFormPanel ? 'bottom-[calc(40vh+80px)]' : 'bottom-36'}`}>
-        {/* Locate Me Button */}
-        <button
+        {/* Floating Action Buttons */}
+        <div className={`absolute right-4 z-10 flex flex-col gap-3 ${showFormPanel ? 'bottom-[calc(40vh+80px)]' : 'bottom-20'}`}>
+          {/* Locate Me Button */}
+          <button
           type="button"
           onClick={getCurrentLocation}
           className="bg-white rounded-full p-4 shadow-xl hover:bg-gray-50 transition flex items-center justify-center"
@@ -885,10 +882,10 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
             />
           </svg>
-        </button>
+          </button>
 
-        {/* Form Panel Toggle */}
-        <button
+          {/* Form Panel Toggle */}
+          <button
           type="button"
           onClick={() => setShowFormPanel(!showFormPanel)}
           className="bg-white rounded-full p-4 shadow-xl hover:bg-gray-50 transition flex items-center justify-center"
@@ -908,7 +905,8 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               d={showFormPanel ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
             />
           </svg>
-        </button>
+          </button>
+        </div>
       </div>
 
       {/* Menu Panel (Bottom Sheet) - menu z opcjami */}
