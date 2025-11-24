@@ -519,111 +519,94 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
       {/* Distance Info Panel - zawsze widoczny, przytwierdzony na górze */}
       <div ref={panelRef} className="bg-white shadow-xl p-3 z-20">
         {/* Start Location */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-medium text-gray-500">Punkt startowy</label>
-            {fromLocation && (
-              <div className="flex items-center gap-2">
-                {!isFromLocationFromGPS && (
-                  <button
-                    type="button"
-                    onClick={getCurrentLocation}
-                    className="text-primary-600 hover:text-primary-700 transition"
-                    title="Odśwież lokalizację GPS"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSelectingDestination(false) // Disable destination selection
-                    setIsSelectingStart(true)
-                    setFromLocation(null)
-                    setIsFromLocationFromGPS(false)
-                    // Stop GPS tracking when user edits location
-                    if (watchPositionIdRef.current !== null) {
-                      navigator.geolocation.clearWatch(watchPositionIdRef.current)
-                      watchPositionIdRef.current = null
-                    }
-                  }}
-                  className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                  title="Zmień punkt startowy"
-                >
-                  Edytuj
-                </button>
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-lg flex-shrink-0" title="Punkt startowy">▶️</span>
+          <div className="flex-1 min-w-0">
+            {fromLocation ? (
+              <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5 truncate">
+                {fromLocation.lat.toFixed(4)}, {fromLocation.lng.toFixed(4)}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
+                Nie ustawiono
               </div>
             )}
           </div>
-          {fromLocation ? (
-            <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5">
-              {fromLocation.lat.toFixed(4)}, {fromLocation.lng.toFixed(4)}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
-              Nie ustawiono
-            </div>
-          )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {fromLocation && !isFromLocationFromGPS && (
+              <button
+                type="button"
+                onClick={getCurrentLocation}
+                className="text-primary-600 hover:text-primary-700 transition"
+                title="Odśwież lokalizację GPS"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSelectingDestination(false)
+                setIsSelectingStart(true)
+                setFromLocation(null)
+                setIsFromLocationFromGPS(false)
+                if (watchPositionIdRef.current !== null) {
+                  navigator.geolocation.clearWatch(watchPositionIdRef.current)
+                  watchPositionIdRef.current = null
+                }
+              }}
+              className="text-xs text-primary-600 hover:text-primary-700 font-medium whitespace-nowrap"
+              title="Zmień punkt startowy"
+            >
+              Edytuj
+            </button>
+          </div>
         </div>
 
         {/* Destination Location */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-medium text-gray-500">Punkt docelowy</label>
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-lg flex-shrink-0" title="Punkt docelowy">🏁</span>
+          <div className="flex-1 min-w-0">
             {toLocation ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSelectingStart(false) // Disable start location selection
-                  setIsSelectingDestination(true)
-                }}
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                title="Zmień punkt docelowy"
-              >
-                Edytuj
-              </button>
+              <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5 truncate">
+                {toLocation.lat.toFixed(4)}, {toLocation.lng.toFixed(4)}
+              </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSelectingStart(false) // Disable start location selection
-                  setIsSelectingDestination(true)
-                }}
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                title="Ustaw punkt docelowy"
-              >
-                Ustaw
-              </button>
+              <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
+                Nie ustawiono
+              </div>
             )}
           </div>
-          {toLocation ? (
-            <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5">
-              {toLocation.lat.toFixed(4)}, {toLocation.lng.toFixed(4)}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
-              Nie ustawiono
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              setIsSelectingStart(false)
+              setIsSelectingDestination(true)
+            }}
+            className="text-xs text-primary-600 hover:text-primary-700 font-medium whitespace-nowrap flex-shrink-0"
+            title={toLocation ? "Zmień punkt docelowy" : "Ustaw punkt docelowy"}
+          >
+            Edytuj
+          </button>
         </div>
 
         {/* Distance Info */}
