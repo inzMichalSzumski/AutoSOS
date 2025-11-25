@@ -515,115 +515,98 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
   }
 
   return (
-    <div className="flex flex-col w-full h-screen overflow-hidden">
+    <div className="flex flex-col w-full h-[100dvh] overflow-hidden">
       {/* Distance Info Panel - zawsze widoczny, przytwierdzony na górze */}
-      <div ref={panelRef} className="bg-white shadow-xl p-3 z-20">
+      <div ref={panelRef} className="bg-white shadow-xl p-2 z-20">
         {/* Start Location */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-medium text-gray-500">Punkt startowy</label>
-            {fromLocation && (
-              <div className="flex items-center gap-2">
-                {!isFromLocationFromGPS && (
-                  <button
-                    type="button"
-                    onClick={getCurrentLocation}
-                    className="text-primary-600 hover:text-primary-700 transition"
-                    title="Odśwież lokalizację GPS"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSelectingDestination(false) // Disable destination selection
-                    setIsSelectingStart(true)
-                    setFromLocation(null)
-                    setIsFromLocationFromGPS(false)
-                    // Stop GPS tracking when user edits location
-                    if (watchPositionIdRef.current !== null) {
-                      navigator.geolocation.clearWatch(watchPositionIdRef.current)
-                      watchPositionIdRef.current = null
-                    }
-                  }}
-                  className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                  title="Zmień punkt startowy"
-                >
-                  Edytuj
-                </button>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-lg flex-shrink-0" title="Punkt startowy">▶️</span>
+          <div className="flex-1 min-w-0">
+            {fromLocation ? (
+              <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5 truncate">
+                {fromLocation.lat.toFixed(4)}, {fromLocation.lng.toFixed(4)}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
+                Nie ustawiono
               </div>
             )}
           </div>
-          {fromLocation ? (
-            <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5">
-              {fromLocation.lat.toFixed(4)}, {fromLocation.lng.toFixed(4)}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
-              Nie ustawiono
-            </div>
-          )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {fromLocation && !isFromLocationFromGPS && (
+              <button
+                type="button"
+                onClick={getCurrentLocation}
+                className="text-primary-600 hover:text-primary-700 transition"
+                title="Odśwież lokalizację GPS"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSelectingDestination(false)
+                setIsSelectingStart(true)
+                setFromLocation(null)
+                setIsFromLocationFromGPS(false)
+                if (watchPositionIdRef.current !== null) {
+                  navigator.geolocation.clearWatch(watchPositionIdRef.current)
+                  watchPositionIdRef.current = null
+                }
+              }}
+              className="text-xs text-primary-600 hover:text-primary-700 font-medium whitespace-nowrap"
+              title="Zmień punkt startowy"
+            >
+              Edytuj
+            </button>
+          </div>
         </div>
 
         {/* Destination Location */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-medium text-gray-500">Punkt docelowy</label>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-lg flex-shrink-0" title="Punkt docelowy">🏁</span>
+          <div className="flex-1 min-w-0">
             {toLocation ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSelectingStart(false) // Disable start location selection
-                  setIsSelectingDestination(true)
-                }}
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                title="Zmień punkt docelowy"
-              >
-                Edytuj
-              </button>
+              <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5 truncate">
+                {toLocation.lat.toFixed(4)}, {toLocation.lng.toFixed(4)}
+              </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSelectingStart(false) // Disable start location selection
-                  setIsSelectingDestination(true)
-                }}
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                title="Ustaw punkt docelowy"
-              >
-                Ustaw
-              </button>
+              <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
+                Nie ustawiono
+              </div>
             )}
           </div>
-          {toLocation ? (
-            <div className="text-sm text-gray-900 bg-gray-50 rounded px-2 py-1.5">
-              {toLocation.lat.toFixed(4)}, {toLocation.lng.toFixed(4)}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-400 bg-gray-50 rounded px-2 py-1.5 border-2 border-dashed border-gray-300">
-              Nie ustawiono
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => {
+              setIsSelectingStart(false)
+              setIsSelectingDestination(true)
+            }}
+            className="text-xs text-primary-600 hover:text-primary-700 font-medium whitespace-nowrap flex-shrink-0"
+            title={toLocation ? "Zmień punkt docelowy" : "Ustaw punkt docelowy"}
+          >
+            Edytuj
+          </button>
         </div>
 
         {/* Distance Info */}
@@ -792,11 +775,10 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
             ))}
           </MapContainer>
         </div>
-      </div>
 
-      {/* Confirm Location Button - pokazuje się gdy wybieramy lokalizację startową */}
-      {isSelectingStart && (
-        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20">
+        {/* Confirm Location Button - pokazuje się gdy wybieramy lokalizację startową */}
+        {isSelectingStart && (
+          <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-20">
           <button
             type="button"
             onClick={() => {
@@ -820,12 +802,12 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
             Ustaw tutaj
           </button>
         </div>
-      )}
+        )}
 
-      {/* Confirm Destination Button - pokazuje się gdy wybieramy lokalizację docelową */}
-      {isSelectingDestination && (
-        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 z-20">
-          <button
+        {/* Confirm Destination Button - pokazuje się gdy wybieramy lokalizację docelową */}
+        {isSelectingDestination && (
+          <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-20">
+            <button
             type="button"
             onClick={() => {
               setIsSelectingDestination(false)
@@ -842,15 +824,13 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
             Ustaw tutaj
-          </button>
-        </div>
-      )}
+            </button>
+          </div>
+        )}
 
-
-
-      {/* Call for Help Button - Large button at bottom */}
-      <div className={`absolute left-4 right-4 z-20 ${showFormPanel ? 'bottom-[40vh]' : 'bottom-4'}`}>
-        <button
+        {/* Call for Help Button - Large button at bottom */}
+        <div className={`absolute left-4 right-4 z-20 ${showFormPanel ? 'bottom-[40vh]' : 'bottom-4'}`}>
+          <button
           type="button"
           onClick={() => {
             if (!fromLocation) {
@@ -870,13 +850,13 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
           className="w-full bg-danger-600 hover:bg-danger-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-xl text-lg transition duration-200 transform hover:scale-105 disabled:transform-none shadow-2xl"
         >
           🚨 Wezwij pomoc
-        </button>
-      </div>
+          </button>
+        </div>
 
-      {/* Floating Action Buttons */}
-      <div className={`absolute right-4 z-10 flex flex-col gap-3 ${showFormPanel ? 'bottom-[calc(40vh+80px)]' : 'bottom-24'}`}>
-        {/* Locate Me Button */}
-        <button
+        {/* Floating Action Buttons */}
+        <div className={`absolute right-4 z-10 flex flex-col gap-3 ${showFormPanel ? 'bottom-[calc(40vh+80px)]' : 'bottom-20'}`}>
+          {/* Locate Me Button */}
+          <button
           type="button"
           onClick={getCurrentLocation}
           className="bg-white rounded-full p-4 shadow-xl hover:bg-gray-50 transition flex items-center justify-center"
@@ -902,10 +882,10 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
             />
           </svg>
-        </button>
+          </button>
 
-        {/* Form Panel Toggle */}
-        <button
+          {/* Form Panel Toggle */}
+          <button
           type="button"
           onClick={() => setShowFormPanel(!showFormPanel)}
           className="bg-white rounded-full p-4 shadow-xl hover:bg-gray-50 transition flex items-center justify-center"
@@ -925,7 +905,8 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
               d={showFormPanel ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
             />
           </svg>
-        </button>
+          </button>
+        </div>
       </div>
 
       {/* Menu Panel (Bottom Sheet) - menu z opcjami */}
