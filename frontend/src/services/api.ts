@@ -161,6 +161,37 @@ class ApiClient {
       body: JSON.stringify({ isAvailable }),
     });
   }
+
+  // Push notification endpoints
+  
+  async savePushSubscription(subscriptionData: {
+    operatorId: string;
+    endpoint: string;
+    keys: {
+      p256dh: string;
+      auth: string;
+    };
+  }): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/api/push-subscriptions', {
+      method: 'POST',
+      body: JSON.stringify(subscriptionData),
+    });
+  }
+
+  async removePushSubscription(operatorId: string, endpoint: string): Promise<{ message: string }> {
+    const params = new URLSearchParams({
+      operatorId,
+      endpoint,
+    });
+    
+    return this.request<{ message: string }>(`/api/push-subscriptions?${params}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getPushSubscriptions(operatorId: string): Promise<any[]> {
+    return this.request<any[]>(`/api/push-subscriptions/${operatorId}`);
+  }
 }
 
 export const apiClient = new ApiClient();

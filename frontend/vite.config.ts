@@ -25,12 +25,24 @@ export default defineConfig(({ mode }) => ({
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       },
+      // Enable notifications
+      devOptions: {
+        enabled: true,
+        type: 'module'
+      },
+      // Inject custom service worker code for push notifications
+      injectManifest: {
+        injectionPoint: undefined,
+      },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,mp3,wav}'],
+        // Import custom service worker for push notifications
+        importScripts: ['sw-custom.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\./i,

@@ -35,27 +35,27 @@ export default function UserApp() {
     }
   }
 
-  // Sprawdź czy przyszliśmy z RequestHelp z już utworzonym zgłoszeniem
+  // Check if we came from RequestHelp with an already created request
   useEffect(() => {
     const state = location.state as { request?: HelpRequest } | null
     if (state?.request) {
       setCurrentRequest(state.request)
       setRequestStatus('searching')
       
-      // Połącz z SignalR, aby otrzymywać powiadomienia o ofertach i timeout
+      // Connect to SignalR to receive notifications about offers and timeout
       const setupSignalR = async () => {
         try {
           const connection = await signalRService.connectToRequestHub(state.request!.id)
           connectionRef.current = connection
 
-          // Nasłuchuj na oferty
+          // Listen for offers
           connection.on('OfferReceived', (data: { id: string; price: number; estimatedTimeMinutes?: number; OperatorName: string }) => {
-            // Odśwież listę operatorów, aby pokazać nową ofertę
+            // Refresh operator list to show new offer
             loadOperators(state.request!.fromLocation.lat, state.request!.fromLocation.lng)
             setRequestStatus('offer_received')
           })
 
-          // Nasłuchuj na timeout
+          // Listen for timeout
           connection.on('RequestTimeout', (data: { id: string; message: string }) => {
             setRequestStatus('completed')
             alert(data.message || 'Nie udało się znaleźć dostępnej pomocy. Spróbuj ponownie później.')
@@ -67,10 +67,10 @@ export default function UserApp() {
       
       setupSignalR()
       
-      // Pobierz operatorów dla już utworzonego zgłoszenia
+      // Load operators for the already created request
       loadOperators(state.request.fromLocation.lat, state.request.fromLocation.lng)
       
-      // Wyczyść state po użyciu
+      // Clear state after use
       window.history.replaceState({}, document.title)
     }
   }, [location.state])
@@ -95,18 +95,18 @@ export default function UserApp() {
       setCurrentRequest(updatedRequest)
       setRequestStatus('searching')
 
-      // 3. Połącz z SignalR, aby otrzymywać powiadomienia o ofertach i timeout
+      // 3. Connect to SignalR to receive notifications about offers and timeout
       const connection = await signalRService.connectToRequestHub(response.id)
       connectionRef.current = connection
 
-      // Nasłuchuj na oferty
+      // Listen for offers
       connection.on('OfferReceived', (data: { id: string; price: number; estimatedTimeMinutes?: number; OperatorName: string }) => {
-        // Odśwież listę operatorów, aby pokazać nową ofertę
+        // Refresh operator list to show new offer
         loadOperators(request.fromLocation.lat, request.fromLocation.lng)
         setRequestStatus('offer_received')
       })
 
-      // Nasłuchuj na timeout
+      // Listen for timeout
       connection.on('RequestTimeout', (data: { id: string; message: string }) => {
         setRequestStatus('completed')
         alert(data.message || 'Nie udało się znaleźć dostępnej pomocy. Spróbuj ponownie później.')
@@ -165,7 +165,7 @@ export default function UserApp() {
   }
 
   const handleNewRequest = () => {
-    // Rozłącz SignalR
+    // Disconnect SignalR
     if (connectionRef.current) {
       connectionRef.current.off('OfferReceived')
       connectionRef.current.off('RequestTimeout')
@@ -180,17 +180,17 @@ export default function UserApp() {
   }
 
   const handleRetry = async () => {
-    // Zachowaj lokalizacje z obecnego zgłoszenia i wróć do mapy
+    // Preserve locations from current request and return to map
     if (currentRequest) {
-      // Anuluj zgłoszenie w backendzie
+      // Cancel request in backend
       try {
         await apiClient.cancelRequest(currentRequest.id, currentRequest.phoneNumber)
       } catch (error) {
         console.error('Error cancelling request:', error)
-        // Kontynuuj nawet jeśli anulowanie się nie powiodło
+        // Continue even if cancellation failed
       }
       
-      // Rozłącz SignalR
+      // Disconnect SignalR
       if (connectionRef.current) {
         connectionRef.current.off('OfferReceived')
         connectionRef.current.off('RequestTimeout')
@@ -198,7 +198,7 @@ export default function UserApp() {
         connectionRef.current = null
       }
       
-      // Reset stanu, ale zachowaj lokalizacje
+      // Reset state but preserve locations
       const savedFromLocation = currentRequest.fromLocation
       const savedToLocation = currentRequest.toLocation || null
       
@@ -207,8 +207,8 @@ export default function UserApp() {
       setRequestStatus('draft')
       setSelectedOperator(null)
       
-      // Przekieruj do głównej strony z zachowanymi lokalizacjami
-      // Lokalizacje będą przekazane przez state i użyte w HelpRequestForm
+      // Redirect to main page with preserved locations
+      // Locations will be passed through state and used in HelpRequestForm
       navigate('/', {
         state: {
           fromLocation: savedFromLocation,
@@ -217,12 +217,12 @@ export default function UserApp() {
         replace: true
       })
     } else {
-      // Jeśli nie ma zgłoszenia, po prostu wróć do mapy
+      // If no request, just return to map
       handleNewRequest()
     }
   }
 
-  // Cleanup SignalR przy unmount
+  // Cleanup SignalR on unmount
   useEffect(() => {
     return () => {
       if (connectionRef.current) {
@@ -234,7 +234,7 @@ export default function UserApp() {
   }, [])
 
   if (!currentRequest) {
-    // Sprawdź czy przyszliśmy z handleRetry z zachowanymi lokalizacjami
+    // Check if we came from handleRetry with preserved locations
     const retryState = location.state as { fromLocation?: Location; toLocation?: Location } | null
     
     return (

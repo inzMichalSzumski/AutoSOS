@@ -238,7 +238,7 @@ export async function getRoute(
 
     return {
       coordinates,
-      distance: route.distance / 1000, // Konwertuj z metrów na kilometry
+      distance: route.distance / 1000, // Convert from meters to kilometers
       duration: route.duration, // w sekundach
     }
   } catch (error) {

@@ -6,7 +6,7 @@ import OperatorLogin from './pages/operator/OperatorLogin'
 import OperatorRegister from './pages/operator/OperatorRegister'
 import OperatorApp from './pages/operator/OperatorApp'
 
-// Komponent zabezpieczający - wymaga logowania
+// Protected component - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth()
 

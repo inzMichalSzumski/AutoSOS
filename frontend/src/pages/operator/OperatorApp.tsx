@@ -3,7 +3,9 @@ import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '../../services/api'
 import { signalRService } from '../../services/signalr'
+import { notificationSoundService } from '../../services/notificationSound'
 import * as signalR from '@microsoft/signalr'
+import NotificationPermissionBanner from '../../components/NotificationPermissionBanner'
 
 interface AvailableRequest {
   id: string
@@ -31,7 +33,7 @@ export default function OperatorApp() {
   useEffect(() => {
     loadRequests()
     
-    // Połącz z SignalR, aby otrzymywać powiadomienia w czasie rzeczywistym
+    // Connect to SignalR to receive real-time notifications
     let connection: signalR.HubConnection | null = null
     
     const setupSignalR = async () => {
@@ -40,9 +42,14 @@ export default function OperatorApp() {
       try {
         connection = await signalRService.connectToOperatorHub(operatorId)
         
-        // Nasłuchuj na nowe zgłoszenia
+        // Listen for new requests
         connection.on('NewRequest', (request: AvailableRequest) => {
-          // Dodaj nowe zgłoszenie do listy, jeśli jeszcze go nie ma
+          // Play notification sound
+          notificationSoundService.playUrgent().catch(err => 
+            console.error('Error playing notification sound:', err)
+          )
+          
+          // Add new request to list if it doesn't exist yet
           setRequests(prev => {
             const exists = prev.some(r => r.id === request.id)
             if (exists) return prev
@@ -56,7 +63,7 @@ export default function OperatorApp() {
     
     setupSignalR()
     
-    // Odświeżaj co 30 sekund (SignalR będzie głównym źródłem powiadomień)
+    // Refresh every 30 seconds (SignalR will be the primary source of notifications)
     const interval = setInterval(loadRequests, 30000)
     
     return () => {
@@ -133,6 +140,9 @@ export default function OperatorApp() {
             </button>
           </div>
         </div>
+
+        {/* Notification Permission Banner */}
+        {operatorId && <NotificationPermissionBanner operatorId={operatorId} />}
 
         {/* Dashboard Content */}
         <div className="bg-white rounded-2xl shadow-lg p-8">

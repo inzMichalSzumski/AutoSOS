@@ -23,7 +23,7 @@ export default function OperatorList({
 }: OperatorListProps) {
   const [sortBy, setSortBy] = useState<SortOption>('price')
 
-  // Sortowanie operatorów
+  // Sort operators
   const sortedOperators = useMemo(() => {
     const operatorsCopy = [...operators]
     
@@ -32,20 +32,20 @@ export default function OperatorList({
         return operatorsCopy.sort((a, b) => a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' }))
       case 'price':
         return operatorsCopy.sort((a, b) => {
-          // Operatorzy bez ceny (undefined/null) trafiają na dół
+          // Operators without price (undefined/null) go to the bottom
           const aHasPrice = a.estimatedPrice !== undefined && a.estimatedPrice !== null
           const bHasPrice = b.estimatedPrice !== undefined && b.estimatedPrice !== null
           
-          // Oba mają cenę - sortuj od najniższej do najwyższej
+          // Both have price - sort from lowest to highest
           if (aHasPrice && bHasPrice) {
             return a.estimatedPrice! - b.estimatedPrice!
           }
           
-          // Operator z ceną jest przed operatorem bez ceny
+          // Operator with price comes before operator without price
           if (aHasPrice && !bHasPrice) return -1
           if (!aHasPrice && bHasPrice) return 1
           
-          // Oba bez ceny - zachowaj oryginalną kolejność
+          // Both without price - maintain original order
           return 0
         })
       default:

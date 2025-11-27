@@ -11,6 +11,7 @@ public class RequestNotificationService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<RequestNotificationService> _logger;
+    private readonly WebPushService _webPushService;
     private const int InitialNotificationCount = 15; // Nearest 15 operators
     private const int ExpandNotificationCount = 10; // Additional 10 on expansion
     private const int NotificationTimeoutSeconds = 30; // 30 seconds for response
@@ -27,10 +28,12 @@ public class RequestNotificationService : BackgroundService
 
     public RequestNotificationService(
         IServiceProvider serviceProvider,
-        ILogger<RequestNotificationService> logger)
+        ILogger<RequestNotificationService> logger,
+        WebPushService webPushService)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _webPushService = webPushService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -174,8 +177,20 @@ public class RequestNotificationService : BackgroundService
                         Distance = Math.Round(op.Distance, 1)
                     };
 
-                    // Send notification to specific operator
+                    // Send notification via SignalR (for active connections)
                     await hub.Clients.Group($"operator-{op.Operator.Id}").SendAsync("NewRequest", operatorNotification);
+
+                    // Send Web Push notification (works even when tab is closed)
+                    var pushPayload = new
+                    {
+                        title = "AutoSOS - Nowe zgłoszenie",
+                        body = $"Nowe zgłoszenie w odległości {Math.Round(op.Distance, 1)} km",
+                        requestId = request.Id.ToString(),
+                        distance = Math.Round(op.Distance, 1),
+                        phoneNumber = request.PhoneNumber
+                    };
+
+                    await _webPushService.SendNotificationToOperatorAsync(db, op.Operator.Id, pushPayload);
                 }
 
                 _logger.LogInformation($"Sent notifications for request {request.Id} to {operatorsWithDistance.Count} operators (expansion {expansionNumber})");
