@@ -188,13 +188,12 @@ export default function OperatorApp() {
     navigate('/operator/login')
   }
 
-  // Show location setup modal if needed
+  // Show location setup fullscreen if needed
   if (showLocationSetup) {
     return (
       <OperatorLocationSetup
         initialLocation={operatorLocation}
         onLocationSet={handleLocationSet}
-        isModal={true}
       />
     )
   }

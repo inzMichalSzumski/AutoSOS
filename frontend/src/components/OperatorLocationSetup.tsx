@@ -12,7 +12,6 @@ interface OperatorLocationSetupProps {
   initialLocation?: Location | null
   onLocationSet: (location: Location) => void
   onCancel?: () => void
-  isModal?: boolean
 }
 
 // Fixed marker icon for when location is confirmed (not selecting)
@@ -56,8 +55,7 @@ function MapCenterTracker({
 export default function OperatorLocationSetup({
   initialLocation,
   onLocationSet,
-  onCancel,
-  isModal = true
+  onCancel
 }: OperatorLocationSetupProps) {
   const [location, setLocation] = useState<Location | null>(initialLocation || null)
   const [mapCenter, setMapCenter] = useState<Location>(
@@ -113,127 +111,129 @@ export default function OperatorLocationSetup({
     setLocationError(null)
   }
 
-  const containerClass = isModal
-    ? 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'
-    : 'w-full h-full'
-
-  const contentClass = isModal
-    ? 'bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto'
-    : 'bg-white rounded-2xl shadow-lg w-full h-full'
-
   return (
-    <div className={containerClass}>
-      <div className={contentClass}>
-        <div className="p-6">
-          {/* Header */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              📍 Set Your Location
-            </h2>
-            <p className="text-gray-600">
-              Set your current location so users can find you. You can use GPS or select manually on the map.
+    <div className="fixed inset-0 bg-white z-50 flex flex-col">
+      {/* Header */}
+      <div className="bg-white shadow-md p-4 z-20">
+        <div className="container mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            📍 Set Your Location
+          </h2>
+          <p className="text-gray-600 text-sm">
+            Set your current location so users can find you. Use GPS or move the map to select manually.
+          </p>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="bg-gray-50 border-b border-gray-200 p-4 z-20">
+        <div className="container mx-auto flex gap-3">
+          <button
+            onClick={getCurrentLocation}
+            disabled={isLoadingGPS}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            {isLoadingGPS ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                <span>Getting location...</span>
+              </>
+            ) : (
+              <>
+                <span>📍</span>
+                <span>Use My GPS Location</span>
+              </>
+            )}
+          </button>
+          
+          <button
+            onClick={handleManualSelection}
+            disabled={isManualSelection}
+            className="flex-1 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-500 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            <span>🗺️</span>
+            <span>Select on Map</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Error message */}
+      {locationError && (
+        <div className="bg-red-50 border-b border-red-200 p-4 z-20">
+          <div className="container mx-auto">
+            <p className="text-sm text-red-800">{locationError}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Instructions */}
+      {isManualSelection && (
+        <div className="bg-blue-50 border-b border-blue-200 p-3 z-20">
+          <div className="container mx-auto">
+            <p className="text-sm text-blue-800">
+              <strong>Move the map</strong> to position the pin at your location, then click "Confirm Location"
             </p>
           </div>
+        </div>
+      )}
 
-          {/* Action buttons */}
-          <div className="flex gap-3 mb-4">
-            <button
-              onClick={getCurrentLocation}
-              disabled={isLoadingGPS}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-            >
-              {isLoadingGPS ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                  <span>Getting location...</span>
-                </>
-              ) : (
-                <>
-                  <span>📍</span>
-                  <span>Use My GPS Location</span>
-                </>
-              )}
-            </button>
-            
-            <button
-              onClick={handleManualSelection}
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-            >
-              <span>🗺️</span>
-              <span>Select on Map</span>
-            </button>
+      {/* Map - takes remaining space */}
+      <div className="relative flex-1 z-10">
+        {/* Crosshair pin - centered on map during manual selection */}
+        {isManualSelection && (
+          <div 
+            className="absolute top-1/2 left-1/2 pointer-events-none" 
+            style={{ 
+              transform: 'translate(-12px, -41px)',
+              zIndex: 1000
+            }}
+          >
+            <img
+              src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png"
+              alt=""
+              className="w-[25px] h-[41px] drop-shadow-lg"
+              style={{ imageRendering: 'crisp-edges' }}
+            />
           </div>
+        )}
 
-          {/* Error message */}
-          {locationError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-              <p className="text-sm text-red-800">{locationError}</p>
-            </div>
-          )}
+        <div className="absolute inset-0">
+          <MapContainer
+            center={[mapCenter.lat, mapCenter.lng]}
+            zoom={13}
+            style={{ height: '100%', width: '100%' }}
+            zoomControl={true}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
 
-          {/* Instructions */}
-          {isManualSelection && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <p className="text-sm text-blue-800">
-                <strong>Move the map</strong> to position the pin at your location, then click "Confirm Location"
-              </p>
-            </div>
-          )}
-
-          {/* Map */}
-          <div className="relative mb-4 h-96">
-            {/* Crosshair pin - centered on map during manual selection */}
-            {isManualSelection && (
-              <div 
-                className="absolute top-1/2 left-1/2 pointer-events-none" 
-                style={{ 
-                  transform: 'translate(-12px, -41px)',
-                  zIndex: 1000
-                }}
-              >
-                <img
-                  src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png"
-                  alt=""
-                  className="w-[25px] h-[41px] drop-shadow-lg"
-                  style={{ imageRendering: 'crisp-edges' }}
-                />
-              </div>
+            {/* Fixed marker when location is confirmed (not selecting) */}
+            {location && !isManualSelection && (
+              <Marker
+                position={[location.lat, location.lng]}
+                icon={FixedMarkerIcon}
+              />
             )}
 
-            <div className="h-full rounded-lg overflow-hidden border-2 border-gray-300">
-              <MapContainer
-                center={[mapCenter.lat, mapCenter.lng]}
-                zoom={13}
-                style={{ height: '100%', width: '100%' }}
-                zoomControl={true}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
+            {/* Track map center for manual selection */}
+            <MapCenterTracker
+              onLocationChange={(loc) => {
+                setMapCenter(loc)
+                if (isManualSelection) {
+                  setLocation(loc)
+                }
+              }}
+              shouldUpdate={isManualSelection}
+            />
+          </MapContainer>
+        </div>
+      </div>
 
-                {/* Fixed marker when location is confirmed (not selecting) */}
-                {location && !isManualSelection && (
-                  <Marker
-                    position={[location.lat, location.lng]}
-                    icon={FixedMarkerIcon}
-                  />
-                )}
-
-                {/* Track map center for manual selection */}
-                <MapCenterTracker
-                  onLocationChange={(loc) => {
-                    setMapCenter(loc)
-                    if (isManualSelection) {
-                      setLocation(loc)
-                    }
-                  }}
-                  shouldUpdate={isManualSelection}
-                />
-              </MapContainer>
-            </div>
-          </div>
-
+      {/* Bottom bar with location info and actions */}
+      <div className="bg-white border-t border-gray-200 shadow-lg p-4 z-20">
+        <div className="container mx-auto">
           {/* Location info */}
           {location && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
