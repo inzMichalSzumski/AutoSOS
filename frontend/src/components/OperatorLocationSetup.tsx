@@ -181,8 +181,26 @@ export default function OperatorLocationSetup({
           )}
 
           {/* Map */}
-          <div className="relative mb-4">
-            <div className="h-96 rounded-lg overflow-hidden border-2 border-gray-300">
+          <div className="relative mb-4 h-96">
+            {/* Crosshair pin - centered on map during manual selection */}
+            {isManualSelection && (
+              <div 
+                className="absolute top-1/2 left-1/2 pointer-events-none" 
+                style={{ 
+                  transform: 'translate(-12px, -41px)',
+                  zIndex: 1000
+                }}
+              >
+                <img
+                  src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png"
+                  alt=""
+                  className="w-[25px] h-[41px] drop-shadow-lg"
+                  style={{ imageRendering: 'crisp-edges' }}
+                />
+              </div>
+            )}
+
+            <div className="h-full rounded-lg overflow-hidden border-2 border-gray-300">
               <MapContainer
                 center={[mapCenter.lat, mapCenter.lng]}
                 zoom={13}
@@ -214,21 +232,6 @@ export default function OperatorLocationSetup({
                 />
               </MapContainer>
             </div>
-
-            {/* Crosshair pin - centered on map during manual selection */}
-            {isManualSelection && (
-              <div 
-                className="absolute top-1/2 left-1/2 z-50 pointer-events-none" 
-                style={{ transform: 'translate(-12px, -41px)' }}
-              >
-                <img
-                  src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png"
-                  alt=""
-                  className="w-[25px] h-[41px] drop-shadow-lg"
-                  style={{ imageRendering: 'crisp-edges' }}
-                />
-              </div>
-            )}
           </div>
 
           {/* Location info */}
