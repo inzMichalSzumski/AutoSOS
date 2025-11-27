@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Operator Location Management
+
+#### Frontend
+- **OperatorLocationSetup Component** - modal for setting operator location
+  - GPS geolocation with browser API
+  - Manual location selection on interactive map
+  - Real-time coordinate display
+  - Leaflet map with OpenStreetMap tiles
+  - Wrench icon (🔧) marker for operators
+
+- **Operator Panel Integration**
+  - Location check on login
+  - Mandatory location setup for new operators
+  - Location display in panel header
+  - "Change" button to update location anytime
+  - Fallback to localStorage if API fails
+
+#### Backend
+- **Get Operator Details Endpoint** - `GET /api/operators/{id}`
+  - Returns operator info including current location
+  - Authenticated endpoint (JWT required)
+  - Operators can only access their own details
+
+#### Documentation
+- **OPERATOR_LOCATION.md** - complete location management guide
+  - Setup flow and user experience
+  - API endpoints documentation
+  - Distance calculation explanation
+  - Testing scenarios
+  - Troubleshooting guide
+
 ## [0.2.0] - 2025-11-27
 
 ### Added - Operator Panel Notifications

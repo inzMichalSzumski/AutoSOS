@@ -61,6 +61,50 @@ public static class OperatorEndpoints
         .WithName("GetOperators")
         .WithOpenApi();
 
+        // GET /api/operators/{id} - Get operator details (authenticated)
+        group.MapGet("/{id}", async (
+            Guid id,
+            AutoSOSDbContext db,
+            HttpContext context) =>
+        {
+            // Get operatorId from JWT token
+            var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
+            if (operatorIdClaim == null || !Guid.TryParse(operatorIdClaim, out var tokenOperatorId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Check if operator is requesting their own details
+            if (tokenOperatorId != id)
+            {
+                return Results.Forbid();
+            }
+
+            var operatorEntity = await db.Operators
+                .Include(o => o.User)
+                .FirstOrDefaultAsync(o => o.Id == id);
+
+            if (operatorEntity == null)
+            {
+                return Results.NotFound(new { error = "Operator not found" });
+            }
+
+            return Results.Ok(new
+            {
+                operatorEntity.Id,
+                operatorEntity.Name,
+                operatorEntity.Phone,
+                operatorEntity.VehicleType,
+                operatorEntity.CurrentLatitude,
+                operatorEntity.CurrentLongitude,
+                operatorEntity.IsAvailable,
+                operatorEntity.ServiceRadiusKm
+            });
+        })
+        .RequireAuthorization()
+        .WithName("GetOperatorDetails")
+        .WithOpenApi();
+
         // PUT /api/operators/{id}/location - Update operator location
         group.MapPut("/{id}/location", async (
             Guid id,

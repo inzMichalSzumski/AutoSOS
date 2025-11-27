@@ -6,6 +6,7 @@ import { signalRService } from '../../services/signalr'
 import { notificationSoundService } from '../../services/notificationSound'
 import * as signalR from '@microsoft/signalr'
 import NotificationPermissionBanner from '../../components/NotificationPermissionBanner'
+import OperatorLocationSetup from '../../components/OperatorLocationSetup'
 
 interface AvailableRequest {
   id: string
@@ -20,6 +21,11 @@ interface AvailableRequest {
   distance: number
 }
 
+interface OperatorLocation {
+  lat: number
+  lng: number
+}
+
 export default function OperatorApp() {
   const { operatorName, operatorId, logout } = useAuth()
   const navigate = useNavigate()
@@ -29,8 +35,21 @@ export default function OperatorApp() {
   const [offerPrice, setOfferPrice] = useState('')
   const [offerTime, setOfferTime] = useState('')
   const [submittingOffer, setSubmittingOffer] = useState(false)
+  const [operatorLocation, setOperatorLocation] = useState<OperatorLocation | null>(null)
+  const [showLocationSetup, setShowLocationSetup] = useState(false)
+  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false)
+
+  // Check operator location on mount
+  useEffect(() => {
+    checkOperatorLocation()
+  }, [operatorId])
 
   useEffect(() => {
+    // Don't load requests if location is not set
+    if (!operatorLocation) {
+      return
+    }
+
     loadRequests()
     
     // Connect to SignalR to receive real-time notifications
@@ -72,7 +91,58 @@ export default function OperatorApp() {
         connection.off('NewRequest')
       }
     }
-  }, [operatorId])
+  }, [operatorId, operatorLocation])
+
+  const checkOperatorLocation = async () => {
+    if (!operatorId) return
+
+    try {
+      const operator = await apiClient.getOperatorDetails(operatorId)
+      
+      if (operator.currentLatitude && operator.currentLongitude) {
+        setOperatorLocation({
+          lat: operator.currentLatitude,
+          lng: operator.currentLongitude
+        })
+      } else {
+        // No location set, show setup modal
+        setShowLocationSetup(true)
+      }
+    } catch (error) {
+      console.error('Error fetching operator details:', error)
+      // Try localStorage as fallback
+      const savedLocation = localStorage.getItem(`operator_location_${operatorId}`)
+      if (savedLocation) {
+        try {
+          const location = JSON.parse(savedLocation)
+          setOperatorLocation(location)
+        } catch (parseError) {
+          console.error('Error parsing saved location:', parseError)
+          setShowLocationSetup(true)
+        }
+      } else {
+        setShowLocationSetup(true)
+      }
+    }
+  }
+
+  const handleLocationSet = async (location: OperatorLocation) => {
+    if (!operatorId) return
+
+    setIsUpdatingLocation(true)
+    try {
+      await apiClient.updateOperatorLocation(operatorId, location.lat, location.lng)
+      setOperatorLocation(location)
+      // Save to localStorage as backup
+      localStorage.setItem(`operator_location_${operatorId}`, JSON.stringify(location))
+      setShowLocationSetup(false)
+    } catch (error) {
+      console.error('Error updating location:', error)
+      alert('Failed to update location. Please try again.')
+    } finally {
+      setIsUpdatingLocation(false)
+    }
+  }
 
   const loadRequests = async () => {
     try {
@@ -118,19 +188,43 @@ export default function OperatorApp() {
     navigate('/operator/login')
   }
 
+  // Show location setup modal if needed
+  if (showLocationSetup) {
+    return (
+      <OperatorLocationSetup
+        initialLocation={operatorLocation}
+        onLocationSet={handleLocationSet}
+        isModal={true}
+      />
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex justify-between items-center">
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900">
                 🚗 Panel Operatora
               </h1>
               <p className="text-gray-600 mt-1">
                 Witaj, {operatorName}!
               </p>
+              {operatorLocation && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-sm text-gray-500">
+                    📍 Location: {operatorLocation.lat.toFixed(4)}, {operatorLocation.lng.toFixed(4)}
+                  </span>
+                  <button
+                    onClick={() => setShowLocationSetup(true)}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Change
+                  </button>
+                </div>
+              )}
             </div>
             <button
               onClick={handleLogout}

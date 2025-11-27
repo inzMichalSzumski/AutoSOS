@@ -147,6 +147,19 @@ class ApiClient {
   }
 
   // Operator endpoints (require authentication)
+
+  async getOperatorDetails(operatorId: string): Promise<{
+    id: string;
+    name: string;
+    phone: string;
+    vehicleType: string;
+    currentLatitude: number | null;
+    currentLongitude: number | null;
+    isAvailable: boolean;
+    serviceRadiusKm: number | null;
+  }> {
+    return this.request(`/api/operators/${operatorId}`);
+  }
   
   async updateOperatorLocation(operatorId: string, latitude: number, longitude: number): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/api/operators/${operatorId}/location`, {
