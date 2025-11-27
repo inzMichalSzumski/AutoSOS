@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
-import { Icon, DivIcon } from 'leaflet'
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet'
+import { Icon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 interface Location {
@@ -15,12 +15,14 @@ interface OperatorLocationSetupProps {
   isModal?: boolean
 }
 
-// Operator icon (wrench)
-const OperatorIcon = new DivIcon({
-  html: '<div style="font-size: 32px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">🔧</div>',
-  className: 'operator-icon',
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
+// Fixed marker icon for when location is confirmed (not selecting)
+const FixedMarkerIcon = new Icon({
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
 })
 
 // Component to handle map center tracking
@@ -173,7 +175,7 @@ export default function OperatorLocationSetup({
           {isManualSelection && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <p className="text-sm text-blue-800">
-                <strong>Move the map</strong> to position the marker at your location, then click "Confirm Location"
+                <strong>Move the map</strong> to position the pin at your location, then click "Confirm Location"
               </p>
             </div>
           )}
@@ -191,20 +193,12 @@ export default function OperatorLocationSetup({
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                
-                {/* Center marker (always visible) */}
-                {isManualSelection && (
-                  <Marker
-                    position={[mapCenter.lat, mapCenter.lng]}
-                    icon={OperatorIcon}
-                  />
-                )}
 
-                {/* Fixed marker when location is set */}
+                {/* Fixed marker when location is confirmed (not selecting) */}
                 {location && !isManualSelection && (
                   <Marker
                     position={[location.lat, location.lng]}
-                    icon={OperatorIcon}
+                    icon={FixedMarkerIcon}
                   />
                 )}
 
@@ -221,10 +215,18 @@ export default function OperatorLocationSetup({
               </MapContainer>
             </div>
 
-            {/* Crosshair for manual selection */}
+            {/* Crosshair pin - centered on map during manual selection */}
             {isManualSelection && (
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                <div className="text-4xl">🔧</div>
+              <div 
+                className="absolute top-1/2 left-1/2 z-50 pointer-events-none" 
+                style={{ transform: 'translate(-12px, -41px)' }}
+              >
+                <img
+                  src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png"
+                  alt=""
+                  className="w-[25px] h-[41px] drop-shadow-lg"
+                  style={{ imageRendering: 'crisp-edges' }}
+                />
               </div>
             )}
           </div>
