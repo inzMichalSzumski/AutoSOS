@@ -34,9 +34,10 @@ public static class DatabaseInitializer
         
         var equipmentData = new[]
         {
-            new { Name = "Jumpstarter", Description = "Do rozładowanego akumulatora - pomoc na miejscu", RequiresTransport = false },
+            new { Name = "Rozruch", Description = "Do rozładowanego akumulatora - pomoc na miejscu", RequiresTransport = false },
             new { Name = "Mobilna wulkanizacja", Description = "Do przebitych opon - naprawa na miejscu", RequiresTransport = false },
-            new { Name = "Laweta", Description = "Do transportu samochodu - wymaga transportu", RequiresTransport = true }
+            new { Name = "Laweta", Description = "Do transportu samochodu - wymaga transportu", RequiresTransport = true },
+            new { Name = "Ładowanie elektryka", Description = "Ładowanie pojazdów elektrycznych - pomoc na miejscu", RequiresTransport = false }
         };
         
         foreach (var data in equipmentData)

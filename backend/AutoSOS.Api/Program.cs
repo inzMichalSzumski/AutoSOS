@@ -87,6 +87,7 @@ app.MapOperatorEndpoints();
 app.MapOfferEndpoints();
 app.MapEquipmentEndpoints();
 app.MapPushSubscriptionEndpoints();
+app.MapOperatorEquipmentEndpoints();
 
 app.Run();
 

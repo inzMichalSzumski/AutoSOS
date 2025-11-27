@@ -5,6 +5,7 @@ import RequestHelp from './pages/user/RequestHelp'
 import OperatorLogin from './pages/operator/OperatorLogin'
 import OperatorRegister from './pages/operator/OperatorRegister'
 import OperatorApp from './pages/operator/OperatorApp'
+import OperatorSettings from './pages/operator/OperatorSettings'
 
 // Protected component - requires authentication
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -46,6 +47,14 @@ function App() {
           element={
             <ProtectedRoute>
               <OperatorApp />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/operator/settings"
+          element={
+            <ProtectedRoute>
+              <OperatorSettings />
             </ProtectedRoute>
           }
         />

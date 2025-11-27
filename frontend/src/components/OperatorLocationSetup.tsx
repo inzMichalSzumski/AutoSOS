@@ -52,7 +52,7 @@ function MapCenterTracker({
   return null
 }
 
-// Component to recenter map when location changes (e.g., from GPS)
+// Component to center map on specific coordinates
 function MapCenter({ center }: { center: Location }) {
   const map = useMap()
   

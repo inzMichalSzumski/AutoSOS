@@ -205,6 +205,23 @@ class ApiClient {
   async getPushSubscriptions(operatorId: string): Promise<any[]> {
     return this.request<any[]>(`/api/push-subscriptions/${operatorId}`);
   }
+
+  // Operator equipment endpoints
+
+  async getOperatorEquipment(operatorId: string): Promise<{ equipment: Equipment[] }> {
+    return this.request<{ equipment: Equipment[] }>(`/api/operators/${operatorId}/equipment`);
+  }
+
+  async updateOperatorEquipment(operatorId: string, equipmentIds: string[]): Promise<{
+    success: boolean;
+    message: string;
+    equipmentCount: number;
+  }> {
+    return this.request(`/api/operators/${operatorId}/equipment`, {
+      method: 'PUT',
+      body: JSON.stringify({ EquipmentIds: equipmentIds }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '../../services/api'
@@ -37,7 +37,6 @@ export default function OperatorApp() {
   const [submittingOffer, setSubmittingOffer] = useState(false)
   const [operatorLocation, setOperatorLocation] = useState<OperatorLocation | null>(null)
   const [showLocationSetup, setShowLocationSetup] = useState(false)
-  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false)
 
   // Check operator location on mount
   useEffect(() => {
@@ -129,7 +128,6 @@ export default function OperatorApp() {
   const handleLocationSet = async (location: OperatorLocation) => {
     if (!operatorId) return
 
-    setIsUpdatingLocation(true)
     try {
       await apiClient.updateOperatorLocation(operatorId, location.lat, location.lng)
       setOperatorLocation(location)
@@ -139,8 +137,6 @@ export default function OperatorApp() {
     } catch (error) {
       console.error('Error updating location:', error)
       alert('Failed to update location. Please try again.')
-    } finally {
-      setIsUpdatingLocation(false)
     }
   }
 
@@ -225,12 +221,20 @@ export default function OperatorApp() {
                 </div>
               )}
             </div>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-colors"
-            >
-              Wyloguj się
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate('/operator/settings')}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+              >
+                ⚙️ Ustawienia
+              </button>
+              <button
+                onClick={handleLogout}
+                className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+              >
+                Wyloguj się
+              </button>
+            </div>
           </div>
         </div>
 

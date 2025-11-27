@@ -22,3 +22,5 @@ public record AuthResponseDto(
     string Email
 );
 
+public record UpdateOperatorEquipmentDto(List<Guid> EquipmentIds);
+
