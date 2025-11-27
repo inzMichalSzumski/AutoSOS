@@ -52,6 +52,17 @@ function MapCenterTracker({
   return null
 }
 
+// Component to recenter map when location changes (e.g., from GPS)
+function MapCenter({ center }: { center: Location }) {
+  const map = useMap()
+  
+  useEffect(() => {
+    map.setView([center.lat, center.lng], map.getZoom())
+  }, [center.lat, center.lng, map])
+
+  return null
+}
+
 export default function OperatorLocationSetup({
   initialLocation,
   onLocationSet,
@@ -204,6 +215,7 @@ export default function OperatorLocationSetup({
             style={{ height: '100%', width: '100%' }}
             zoomControl={true}
           >
+            <MapCenter center={mapCenter} />
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
