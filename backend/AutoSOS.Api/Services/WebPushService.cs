@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using AutoSOS.Api.Data;
 using AutoSOS.Api.Models;
+using AutoSOS.Api.Exceptions;
 using System.Text.Json;
 using WebPush;
 
@@ -74,15 +75,15 @@ public class WebPushService
                     success = true;
                 }
             }
+            catch (InvalidPushSubscriptionException)
+            {
+                // Subscription is invalid (410 Gone or 404 Not Found), mark as inactive
+                _logger.LogWarning($"Push subscription {subscription.Id} is invalid, marking as inactive");
+                subscription.IsActive = false;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error sending push notification to subscription {subscription.Id}");
-                
-                // If subscription is invalid (410 Gone), mark as inactive
-                if (ex.Message.Contains("410"))
-                {
-                    subscription.IsActive = false;
-                }
             }
         }
 
@@ -174,11 +175,14 @@ public class WebPushService
         {
             _logger.LogError(ex, $"WebPush error sending notification to {subscription.Endpoint}. Status: {ex.StatusCode}");
             
-            // If subscription is invalid (410 Gone or 404 Not Found), throw to mark as inactive
+            // If subscription is invalid (410 Gone or 404 Not Found), throw custom exception to mark as inactive
             if (ex.StatusCode == System.Net.HttpStatusCode.Gone || 
                 ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                throw new Exception($"410 - Subscription no longer valid", ex);
+                throw new InvalidPushSubscriptionException(
+                    ex.StatusCode,
+                    $"Subscription no longer valid (Status: {ex.StatusCode})",
+                    ex);
             }
             
             return false;
