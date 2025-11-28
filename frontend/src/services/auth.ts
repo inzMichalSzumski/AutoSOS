@@ -7,7 +7,7 @@ export interface RegisterData {
   phone: string
   vehicleType: string
   serviceRadiusKm?: number
-  equipmentIds?: string[] // Lista ID sprzętów które operator posiada
+  equipmentIds?: string[] // List of equipment IDs that operator has
 }
 
 export interface LoginData {

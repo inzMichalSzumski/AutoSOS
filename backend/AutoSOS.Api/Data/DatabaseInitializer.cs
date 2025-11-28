@@ -8,25 +8,25 @@ public static class DatabaseInitializer
     /// <summary>
     /// Applies pending migrations and seeds initial data if needed
     /// </summary>
-    public static async Task InitializeAsync(AutoSOSDbContext db)
+    public static async Task InitializeAsync(AutoSOSDbContext db, CancellationToken cancellationToken = default)
     {
         // Apply pending migrations (Code First approach)
-        await db.Database.MigrateAsync();
+        await db.Database.MigrateAsync(cancellationToken);
         
         // Seed equipment if database is empty
-        if (!await db.Equipment.AnyAsync())
+        if (!await db.Equipment.AnyAsync(cancellationToken))
         {
-            await SeedEquipmentAsync(db);
+            await SeedEquipmentAsync(db, cancellationToken);
         }
         
         // Seed operators if database is empty
-        if (!await db.Operators.AnyAsync())
+        if (!await db.Operators.AnyAsync(cancellationToken))
         {
-            await SeedOperatorsAsync(db);
+            await SeedOperatorsAsync(db, cancellationToken);
         }
     }
     
-    private static async Task SeedEquipmentAsync(AutoSOSDbContext db)
+    private static async Task SeedEquipmentAsync(AutoSOSDbContext db, CancellationToken cancellationToken = default)
     {
         // ========================================
         // TODO: TEMPORARY - Seed data for equipment - to be removed when real data is available
@@ -34,9 +34,10 @@ public static class DatabaseInitializer
         
         var equipmentData = new[]
         {
-            new { Name = "Jumpstarter", Description = "Do rozładowanego akumulatora - pomoc na miejscu", RequiresTransport = false },
+            new { Name = "Rozruch", Description = "Do rozładowanego akumulatora - pomoc na miejscu", RequiresTransport = false },
             new { Name = "Mobilna wulkanizacja", Description = "Do przebitych opon - naprawa na miejscu", RequiresTransport = false },
-            new { Name = "Laweta", Description = "Do transportu samochodu - wymaga transportu", RequiresTransport = true }
+            new { Name = "Laweta", Description = "Do transportu samochodu - wymaga transportu", RequiresTransport = true },
+            new { Name = "Ładowanie elektryka", Description = "Ładowanie pojazdów elektrycznych - pomoc na miejscu", RequiresTransport = false }
         };
         
         foreach (var data in equipmentData)
@@ -53,7 +54,7 @@ public static class DatabaseInitializer
             db.Equipment.Add(equipment);
         }
         
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(cancellationToken);
         Console.WriteLine($"✅ Seeded {equipmentData.Length} equipment types to database");
         
         // ========================================
@@ -61,7 +62,7 @@ public static class DatabaseInitializer
         // ========================================
     }
     
-    private static async Task SeedOperatorsAsync(AutoSOSDbContext db)
+    private static async Task SeedOperatorsAsync(AutoSOSDbContext db, CancellationToken cancellationToken = default)
     {
         // ========================================
         // TODO: TEMPORARY - Seed data for operators - to be removed when real operators are available
@@ -144,7 +145,7 @@ public static class DatabaseInitializer
             };
             
             // Determine available equipment based on vehicle type
-            var allEquipment = await db.Equipment.ToListAsync();
+            var allEquipment = await db.Equipment.ToListAsync(cancellationToken);
             var equipmentToAssign = new List<Equipment>();
             
             if (data.VehicleType == "Laweta")
@@ -156,14 +157,14 @@ public static class DatabaseInitializer
             {
                 // Mechanic has jumpstarter and mobile tire service
                 equipmentToAssign = allEquipment
-                    .Where(e => e.Name == "Jumpstarter" || e.Name == "Mobilna wulkanizacja")
+                    .Where(e => e.Name == "Rozruch" || e.Name == "Mobilna wulkanizacja")
                     .ToList();
             }
             else if (data.VehicleType == "Elektryk samochodowy")
             {
                 // Electrician has only jumpstarter
                 equipmentToAssign = allEquipment
-                    .Where(e => e.Name == "Jumpstarter")
+                    .Where(e => e.Name == "Rozruch")
                     .ToList();
             }
             
@@ -181,7 +182,7 @@ public static class DatabaseInitializer
             db.Operators.Add(operatorEntity);
         }
         
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(cancellationToken);
         Console.WriteLine($"✅ Seeded {operatorsData.Length} operators to database");
         
         // ========================================

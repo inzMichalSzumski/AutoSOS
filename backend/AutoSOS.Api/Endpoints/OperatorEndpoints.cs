@@ -19,12 +19,13 @@ public static class OperatorEndpoints
             double lat,
             double lng,
             AutoSOSDbContext db,
-            double radius = 20) =>
+            double radius = 20,
+            CancellationToken cancellationToken = default) =>
         {
             var operators = await db.Operators
                 .Include(o => o.User)
                 .Where(o => o.IsAvailable && o.CurrentLatitude.HasValue && o.CurrentLongitude.HasValue)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             var operatorsInRadius = operators
                 .Select(op => new
@@ -61,12 +62,58 @@ public static class OperatorEndpoints
         .WithName("GetOperators")
         .WithOpenApi();
 
+        // GET /api/operators/{id} - Get operator details (authenticated)
+        group.MapGet("/{id}", async (
+            Guid id,
+            AutoSOSDbContext db,
+            HttpContext context,
+            CancellationToken cancellationToken) =>
+        {
+            // Get operatorId from JWT token
+            var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
+            if (operatorIdClaim == null || !Guid.TryParse(operatorIdClaim, out var tokenOperatorId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Check if operator is requesting their own details
+            if (tokenOperatorId != id)
+            {
+                return Results.Forbid();
+            }
+
+            var operatorEntity = await db.Operators
+                .Include(o => o.User)
+                .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+
+            if (operatorEntity == null)
+            {
+                return Results.NotFound(new { error = "Operator not found" });
+            }
+
+            return Results.Ok(new
+            {
+                operatorEntity.Id,
+                operatorEntity.Name,
+                operatorEntity.Phone,
+                operatorEntity.VehicleType,
+                operatorEntity.CurrentLatitude,
+                operatorEntity.CurrentLongitude,
+                operatorEntity.IsAvailable,
+                operatorEntity.ServiceRadiusKm
+            });
+        })
+        .RequireAuthorization()
+        .WithName("GetOperatorDetails")
+        .WithOpenApi();
+
         // PUT /api/operators/{id}/location - Update operator location
         group.MapPut("/{id}/location", async (
             Guid id,
             UpdateLocationDto dto,
             AutoSOSDbContext db,
-            HttpContext context) =>
+            HttpContext context,
+            CancellationToken cancellationToken) =>
         {
             // Get operatorId from JWT token
             var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
@@ -81,7 +128,7 @@ public static class OperatorEndpoints
                 return Results.Forbid();
             }
 
-            var operatorEntity = await db.Operators.FindAsync(id);
+            var operatorEntity = await db.Operators.FindAsync(new object[] { id }, cancellationToken);
             if (operatorEntity == null)
             {
                 return Results.NotFound(new { error = "Operator not found" });
@@ -90,7 +137,7 @@ public static class OperatorEndpoints
             operatorEntity.CurrentLatitude = dto.Latitude;
             operatorEntity.CurrentLongitude = dto.Longitude;
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new { success = true, message = "Location updated" });
         })
@@ -103,7 +150,8 @@ public static class OperatorEndpoints
             Guid id,
             UpdateAvailabilityDto dto,
             AutoSOSDbContext db,
-            HttpContext context) =>
+            HttpContext context,
+            CancellationToken cancellationToken) =>
         {
             // Get operatorId from JWT token
             var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
@@ -118,7 +166,7 @@ public static class OperatorEndpoints
                 return Results.Forbid();
             }
 
-            var operatorEntity = await db.Operators.FindAsync(id);
+            var operatorEntity = await db.Operators.FindAsync(new object[] { id }, cancellationToken);
             if (operatorEntity == null)
             {
                 return Results.NotFound(new { error = "Operator not found" });
@@ -126,7 +174,7 @@ public static class OperatorEndpoints
 
             operatorEntity.IsAvailable = dto.IsAvailable;
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new { 
                 success = true, 

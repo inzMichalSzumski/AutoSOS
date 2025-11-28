@@ -20,7 +20,8 @@ public static class AuthEndpoints
         // POST /api/auth/register - Register operator
         group.MapPost("/register", async (
             RegisterOperatorDto dto,
-            AutoSOSDbContext db) =>
+            AutoSOSDbContext db,
+            CancellationToken cancellationToken) =>
         {
             // Validation
             if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
@@ -34,7 +35,7 @@ public static class AuthEndpoints
             }
 
             // Check if email is already taken
-            if (await db.Users.AnyAsync(u => u.Email == dto.Email))
+            if (await db.Users.AnyAsync(u => u.Email == dto.Email, cancellationToken))
             {
                 return Results.BadRequest(new { error = "Email already exists" });
             }
@@ -72,7 +73,7 @@ public static class AuthEndpoints
             {
                 var equipment = await db.Equipment
                     .Where(e => dto.EquipmentIds.Contains(e.Id))
-                    .ToListAsync();
+                    .ToListAsync(cancellationToken);
                 
                 foreach (var eq in equipment)
                 {
@@ -86,7 +87,7 @@ public static class AuthEndpoints
 
             db.Users.Add(user);
             db.Operators.Add(operatorEntity);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new
             {
@@ -102,7 +103,8 @@ public static class AuthEndpoints
         group.MapPost("/login", async (
             LoginDto dto,
             AutoSOSDbContext db,
-            IConfiguration config) =>
+            IConfiguration config,
+            CancellationToken cancellationToken) =>
         {
             // Validation
             if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
@@ -113,7 +115,7 @@ public static class AuthEndpoints
             // Find user
             var user = await db.Users
                 .Include(u => u.Operator)
-                .FirstOrDefaultAsync(u => u.Email == dto.Email && u.Role == UserRole.Operator);
+                .FirstOrDefaultAsync(u => u.Email == dto.Email && u.Role == UserRole.Operator, cancellationToken);
 
             if (user == null || string.IsNullOrEmpty(user.PasswordHash))
             {
@@ -148,7 +150,8 @@ public static class AuthEndpoints
         // GET /api/auth/me - Get current user
         group.MapGet("/me", async (
             HttpContext context,
-            AutoSOSDbContext db) =>
+            AutoSOSDbContext db,
+            CancellationToken cancellationToken) =>
         {
             var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
@@ -158,7 +161,7 @@ public static class AuthEndpoints
 
             var user = await db.Users
                 .Include(u => u.Operator)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+                .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
             if (user == null || user.Operator == null)
             {

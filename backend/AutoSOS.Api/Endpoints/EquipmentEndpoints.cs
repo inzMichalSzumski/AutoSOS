@@ -12,7 +12,7 @@ public static class EquipmentEndpoints
             .WithOpenApi();
 
         // GET /api/equipment - Get all available equipment types
-        group.MapGet("/", async (AutoSOSDbContext db) =>
+        group.MapGet("/", async (AutoSOSDbContext db, CancellationToken cancellationToken) =>
         {
             var equipment = await db.Equipment
                 .OrderBy(e => e.Name)
@@ -23,7 +23,7 @@ public static class EquipmentEndpoints
                     e.Description,
                     e.RequiresTransport
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             return Results.Ok(new { equipment });
         })

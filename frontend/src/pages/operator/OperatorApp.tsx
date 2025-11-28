@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '../../services/api'
 import { signalRService } from '../../services/signalr'
+import { notificationSoundService } from '../../services/notificationSound'
 import * as signalR from '@microsoft/signalr'
+import NotificationPermissionBanner from '../../components/NotificationPermissionBanner'
+import OperatorLocationSetup from '../../components/OperatorLocationSetup'
 
 interface AvailableRequest {
   id: string
@@ -18,6 +21,11 @@ interface AvailableRequest {
   distance: number
 }
 
+interface OperatorLocation {
+  lat: number
+  lng: number
+}
+
 export default function OperatorApp() {
   const { operatorName, operatorId, logout } = useAuth()
   const navigate = useNavigate()
@@ -27,11 +35,23 @@ export default function OperatorApp() {
   const [offerPrice, setOfferPrice] = useState('')
   const [offerTime, setOfferTime] = useState('')
   const [submittingOffer, setSubmittingOffer] = useState(false)
+  const [operatorLocation, setOperatorLocation] = useState<OperatorLocation | null>(null)
+  const [showLocationSetup, setShowLocationSetup] = useState(false)
+
+  // Check operator location on mount
+  useEffect(() => {
+    checkOperatorLocation()
+  }, [operatorId])
 
   useEffect(() => {
+    // Don't load requests if location is not set
+    if (!operatorLocation) {
+      return
+    }
+
     loadRequests()
     
-    // Połącz z SignalR, aby otrzymywać powiadomienia w czasie rzeczywistym
+    // Connect to SignalR to receive real-time notifications
     let connection: signalR.HubConnection | null = null
     
     const setupSignalR = async () => {
@@ -40,9 +60,14 @@ export default function OperatorApp() {
       try {
         connection = await signalRService.connectToOperatorHub(operatorId)
         
-        // Nasłuchuj na nowe zgłoszenia
+        // Listen for new requests
         connection.on('NewRequest', (request: AvailableRequest) => {
-          // Dodaj nowe zgłoszenie do listy, jeśli jeszcze go nie ma
+          // Play notification sound
+          notificationSoundService.playUrgent().catch(err => 
+            console.error('Error playing notification sound:', err)
+          )
+          
+          // Add new request to list if it doesn't exist yet
           setRequests(prev => {
             const exists = prev.some(r => r.id === request.id)
             if (exists) return prev
@@ -56,16 +81,71 @@ export default function OperatorApp() {
     
     setupSignalR()
     
-    // Odświeżaj co 30 sekund (SignalR będzie głównym źródłem powiadomień)
+    // Refresh every 30 seconds (SignalR will be the primary source of notifications)
     const interval = setInterval(loadRequests, 30000)
     
     return () => {
       clearInterval(interval)
-      if (connection) {
-        connection.off('NewRequest')
+      // Remove event listener and disconnect SignalR connection to prevent memory leaks
+      // Get connection from service to ensure we have the current instance
+      const currentConnection = signalRService.getConnection()
+      if (currentConnection) {
+        currentConnection.off('NewRequest')
+      }
+      // Properly disconnect SignalR connection
+      signalRService.disconnect().catch(err => 
+        console.error('Error disconnecting SignalR:', err)
+      )
+    }
+  }, [operatorId, operatorLocation])
+
+  const checkOperatorLocation = async () => {
+    if (!operatorId) return
+
+    try {
+      const operator = await apiClient.getOperatorDetails(operatorId)
+      
+      if (operator.currentLatitude && operator.currentLongitude) {
+        setOperatorLocation({
+          lat: operator.currentLatitude,
+          lng: operator.currentLongitude
+        })
+      } else {
+        // No location set, show setup modal
+        setShowLocationSetup(true)
+      }
+    } catch (error) {
+      console.error('Error fetching operator details:', error)
+      // Try localStorage as fallback
+      const savedLocation = localStorage.getItem(`operator_location_${operatorId}`)
+      if (savedLocation) {
+        try {
+          const location = JSON.parse(savedLocation)
+          setOperatorLocation(location)
+        } catch (parseError) {
+          console.error('Error parsing saved location:', parseError)
+          setShowLocationSetup(true)
+        }
+      } else {
+        setShowLocationSetup(true)
       }
     }
-  }, [operatorId])
+  }
+
+  const handleLocationSet = async (location: OperatorLocation) => {
+    if (!operatorId) return
+
+    try {
+      await apiClient.updateOperatorLocation(operatorId, location.lat, location.lng)
+      setOperatorLocation(location)
+      // Save to localStorage as backup
+      localStorage.setItem(`operator_location_${operatorId}`, JSON.stringify(location))
+      setShowLocationSetup(false)
+    } catch (error) {
+      console.error('Error updating location:', error)
+      alert('Failed to update location. Please try again.')
+    }
+  }
 
   const loadRequests = async () => {
     try {
@@ -111,28 +191,62 @@ export default function OperatorApp() {
     navigate('/operator/login')
   }
 
+  // Show location setup fullscreen if needed
+  if (showLocationSetup) {
+    return (
+      <OperatorLocationSetup
+        initialLocation={operatorLocation}
+        onLocationSet={handleLocationSet}
+      />
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <div className="flex justify-between items-center">
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900">
                 🚗 Panel Operatora
               </h1>
               <p className="text-gray-600 mt-1">
                 Witaj, {operatorName}!
               </p>
+              {operatorLocation && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-sm text-gray-500">
+                    📍 Location: {operatorLocation.lat.toFixed(4)}, {operatorLocation.lng.toFixed(4)}
+                  </span>
+                  <button
+                    onClick={() => setShowLocationSetup(true)}
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Change
+                  </button>
+                </div>
+              )}
             </div>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-colors"
-            >
-              Wyloguj się
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate('/operator/settings')}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+              >
+                ⚙️ Ustawienia
+              </button>
+              <button
+                onClick={handleLogout}
+                className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+              >
+                Wyloguj się
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Notification Permission Banner */}
+        {operatorId && <NotificationPermissionBanner operatorId={operatorId} />}
 
         {/* Dashboard Content */}
         <div className="bg-white rounded-2xl shadow-lg p-8">

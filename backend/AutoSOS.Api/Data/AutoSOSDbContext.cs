@@ -16,6 +16,7 @@ public class AutoSOSDbContext : DbContext
     public DbSet<Operator> Operators { get; set; }
     public DbSet<Equipment> Equipment { get; set; }
     public DbSet<OperatorEquipment> OperatorEquipment { get; set; }
+    public DbSet<PushSubscription> PushSubscriptions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -119,6 +120,25 @@ public class AutoSOSDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.RequiredEquipmentId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // PushSubscription configuration
+        modelBuilder.Entity<PushSubscription>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Endpoint).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.P256dhKey).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.AuthKey).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired();
+
+            entity.HasIndex(e => e.OperatorId);
+            entity.HasIndex(e => e.Endpoint);
+
+            entity.HasOne(e => e.Operator)
+                .WithMany()
+                .HasForeignKey(e => e.OperatorId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -20,7 +20,7 @@ export default function OperatorRegister() {
   const [loading, setLoading] = useState(false)
   const [loadingEquipment, setLoadingEquipment] = useState(true)
 
-  // Pobierz dostępne sprzęty z API
+  // Fetch available equipment from API
   useEffect(() => {
     const loadEquipment = async () => {
       try {

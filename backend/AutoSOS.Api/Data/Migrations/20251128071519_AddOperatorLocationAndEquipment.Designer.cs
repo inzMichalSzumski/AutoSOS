@@ -4,16 +4,19 @@ using AutoSOS.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace AutoSOS.Api.Migrations
+namespace AutoSOS.Api.Data.Migrations
 {
     [DbContext(typeof(AutoSOSDbContext))]
-    partial class AutoSOSDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251128071519_AddOperatorLocationAndEquipment")]
+    partial class AddOperatorLocationAndEquipment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -209,9 +212,6 @@ namespace AutoSOS.Api.Migrations
 
                     b.Property<double>("FromLongitude")
                         .HasColumnType("float");
-
-                    b.Property<int?>("LastNotifiedExpansion")
-                        .HasColumnType("int");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()

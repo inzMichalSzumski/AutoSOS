@@ -40,6 +40,10 @@ builder.Services.AddDbContext<AutoSOSDbContext>(options =>
 // SignalR
 builder.Services.AddSignalR();
 
+// Services
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<WebPushService>();
+
 // Background Services
 builder.Services.AddHostedService<RequestNotificationService>();
 
@@ -82,6 +86,8 @@ app.MapRequestEndpoints();
 app.MapOperatorEndpoints();
 app.MapOfferEndpoints();
 app.MapEquipmentEndpoints();
+app.MapPushSubscriptionEndpoints();
+app.MapOperatorEquipmentEndpoints();
 
 app.Run();
 

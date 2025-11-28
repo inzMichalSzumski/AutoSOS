@@ -16,6 +16,12 @@ public class Request
     public RequestStatus Status { get; set; } = RequestStatus.Pending;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+    /// <summary>
+    /// Tracks the last expansion number for which notifications were sent.
+    /// Used to prevent duplicate notifications during expansion windows.
+    /// Null means no notifications have been sent yet.
+    /// </summary>
+    public int? LastNotifiedExpansion { get; set; }
 }
 
 public enum RequestStatus

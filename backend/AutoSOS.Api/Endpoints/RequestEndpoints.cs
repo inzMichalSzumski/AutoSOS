@@ -19,11 +19,12 @@ public static class RequestEndpoints
         group.MapPost("/", async (
             CreateRequestDto dto,
             AutoSOSDbContext db,
-            IHubContext<RequestHub> hub) =>
+            IHubContext<RequestHub> hub,
+            CancellationToken cancellationToken) =>
         {
             // Find or create User for the customer
             var user = await db.Users
-                .FirstOrDefaultAsync(u => u.PhoneNumber == dto.PhoneNumber && u.Role == UserRole.Customer);
+                .FirstOrDefaultAsync(u => u.PhoneNumber == dto.PhoneNumber && u.Role == UserRole.Customer, cancellationToken);
 
             if (user == null)
             {
@@ -36,7 +37,7 @@ public static class RequestEndpoints
                     CreatedAt = DateTime.UtcNow
                 };
                 db.Users.Add(user);
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(cancellationToken);
             }
 
             var request = new Request
@@ -55,7 +56,7 @@ public static class RequestEndpoints
             };
 
             db.Requests.Add(request);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             // Notify client via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("RequestCreated", new
@@ -63,7 +64,7 @@ public static class RequestEndpoints
                 request.Id,
                 request.Status,
                 request.CreatedAt
-            });
+            }, cancellationToken);
 
             // Notifications to operators will be sent by RequestNotificationService
             // (Background Service checks every 5 seconds and sends notifications)
@@ -80,9 +81,9 @@ public static class RequestEndpoints
         .WithOpenApi();
 
         // GET /api/requests/{id} - Get a specific request
-        group.MapGet("/{id:guid}", async (Guid id, AutoSOSDbContext db) =>
+        group.MapGet("/{id:guid}", async (Guid id, AutoSOSDbContext db, CancellationToken cancellationToken) =>
         {
-            var request = await db.Requests.FindAsync(id);
+            var request = await db.Requests.FindAsync(new object[] { id }, cancellationToken);
 
             if (request == null)
                 return Results.NotFound();
@@ -109,9 +110,10 @@ public static class RequestEndpoints
             Guid id,
             CancelRequestDto dto,
             AutoSOSDbContext db,
-            IHubContext<RequestHub> hub) =>
+            IHubContext<RequestHub> hub,
+            CancellationToken cancellationToken) =>
         {
-            var request = await db.Requests.FindAsync(id);
+            var request = await db.Requests.FindAsync(new object[] { id }, cancellationToken);
             
             if (request == null)
                 return Results.NotFound(new { error = "Request not found" });
@@ -130,7 +132,7 @@ public static class RequestEndpoints
 
             request.Status = RequestStatus.Cancelled;
             request.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             // Notify client via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("RequestCancelled", new
@@ -138,7 +140,7 @@ public static class RequestEndpoints
                 request.Id,
                 request.Status,
                 message = "Request has been cancelled"
-            });
+            }, cancellationToken);
 
             return Results.Ok(new
             {
@@ -153,7 +155,8 @@ public static class RequestEndpoints
         // GET /api/requests/available - Get available requests for operators
         group.MapGet("/available", async (
             AutoSOSDbContext db,
-            HttpContext context) =>
+            HttpContext context,
+            CancellationToken cancellationToken) =>
         {
             // Get operatorId from JWT token
             var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
@@ -166,7 +169,7 @@ public static class RequestEndpoints
             var operatorEntity = await db.Operators
                 .Include(o => o.OperatorEquipment)
                     .ThenInclude(oe => oe.Equipment)
-                .FirstOrDefaultAsync(o => o.Id == operatorId);
+                .FirstOrDefaultAsync(o => o.Id == operatorId, cancellationToken);
             
             if (operatorEntity == null || !operatorEntity.IsAvailable || 
                 !operatorEntity.CurrentLatitude.HasValue || !operatorEntity.CurrentLongitude.HasValue)
@@ -183,7 +186,7 @@ public static class RequestEndpoints
             var availableRequests = await db.Requests
                 .Where(r => r.Status == RequestStatus.Pending || r.Status == RequestStatus.Searching)
                 .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             // Calculate distance and filter by service radius and equipment
             var requestsWithDistance = availableRequests

@@ -18,13 +18,14 @@ public static class OfferEndpoints
         group.MapPost("/", async (
             CreateOfferDto dto,
             AutoSOSDbContext db,
-            IHubContext<RequestHub> hub) =>
+            IHubContext<RequestHub> hub,
+            CancellationToken cancellationToken) =>
         {
-            var request = await db.Requests.FindAsync(dto.RequestId);
+            var request = await db.Requests.FindAsync(new object[] { dto.RequestId }, cancellationToken);
             if (request == null)
                 return Results.NotFound(new { error = "Request not found" });
 
-            var operator_ = await db.Operators.FindAsync(dto.OperatorId);
+            var operator_ = await db.Operators.FindAsync(new object[] { dto.OperatorId }, cancellationToken);
             if (operator_ == null || !operator_.IsAvailable)
                 return Results.BadRequest(new { error = "Operator not found or not available" });
 
@@ -43,7 +44,7 @@ public static class OfferEndpoints
             request.Status = RequestStatus.OfferReceived;
             request.UpdatedAt = DateTime.UtcNow;
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             // Notify via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("OfferReceived", new
@@ -52,7 +53,7 @@ public static class OfferEndpoints
                 offer.Price,
                 offer.EstimatedTimeMinutes,
                 OperatorName = operator_.Name
-            });
+            }, cancellationToken);
 
             return Results.Created($"/api/offers/{offer.Id}", new
             {
@@ -70,12 +71,13 @@ public static class OfferEndpoints
         group.MapPost("/{id:guid}/accept", async (
             Guid id,
             AutoSOSDbContext db,
-            IHubContext<RequestHub> hub) =>
+            IHubContext<RequestHub> hub,
+            CancellationToken cancellationToken) =>
         {
             var offer = await db.Offers
                 .Include(o => o.Request)
                 .Include(o => o.Operator)
-                .FirstOrDefaultAsync(o => o.Id == id);
+                .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
             if (offer == null)
                 return Results.NotFound(new { error = "Offer not found" });
@@ -92,14 +94,14 @@ public static class OfferEndpoints
             // Reject other offers for this request
             var otherOffers = await db.Offers
                 .Where(o => o.RequestId == offer.RequestId && o.Id != id && o.Status == OfferStatus.Proposed)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             foreach (var otherOffer in otherOffers)
             {
                 otherOffer.Status = OfferStatus.Rejected;
             }
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             // Notify via SignalR
             await hub.Clients.Group($"request-{offer.Request.Id}").SendAsync("OfferAccepted", new
@@ -108,7 +110,7 @@ public static class OfferEndpoints
                 offer.Price,
                 OperatorName = offer.Operator.Name,
                 OperatorPhone = offer.Operator.Phone
-            });
+            }, cancellationToken);
 
             return Results.Ok(new
             {

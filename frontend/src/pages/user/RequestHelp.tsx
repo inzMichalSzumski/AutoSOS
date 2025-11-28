@@ -24,7 +24,7 @@ export default function RequestHelp() {
   const [loadingEquipment, setLoadingEquipment] = useState(true)
   const [equipmentError, setEquipmentError] = useState<string | null>(null)
 
-  // Pobierz dostępne sprzęty z API
+  // Fetch available equipment from API
   useEffect(() => {
     const loadEquipment = async () => {
       try {
@@ -40,7 +40,7 @@ export default function RequestHelp() {
     loadEquipment()
   }, [])
 
-  // Jeśli brak danych, przekieruj do głównej strony
+  // If no data, redirect to main page
   useEffect(() => {
     if (!routeData || !routeData.fromLocation) {
       navigate('/', { replace: true })
@@ -89,7 +89,7 @@ export default function RequestHelp() {
         id: response.id,
       }
 
-      // 3. Przekieruj do UserApp z danymi zgłoszenia
+      // 3. Redirect to UserApp with request data
       navigate('/', { 
         state: { 
           request: updatedRequest,

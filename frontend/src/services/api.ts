@@ -147,6 +147,19 @@ class ApiClient {
   }
 
   // Operator endpoints (require authentication)
+
+  async getOperatorDetails(operatorId: string): Promise<{
+    id: string;
+    name: string;
+    phone: string;
+    vehicleType: string;
+    currentLatitude: number | null;
+    currentLongitude: number | null;
+    isAvailable: boolean;
+    serviceRadiusKm: number | null;
+  }> {
+    return this.request(`/api/operators/${operatorId}`);
+  }
   
   async updateOperatorLocation(operatorId: string, latitude: number, longitude: number): Promise<{ success: boolean }> {
     return this.request<{ success: boolean }>(`/api/operators/${operatorId}/location`, {
@@ -159,6 +172,54 @@ class ApiClient {
     return this.request<{ success: boolean; isAvailable: boolean }>(`/api/operators/${operatorId}/availability`, {
       method: 'PUT',
       body: JSON.stringify({ isAvailable }),
+    });
+  }
+
+  // Push notification endpoints
+  
+  async savePushSubscription(subscriptionData: {
+    operatorId: string;
+    endpoint: string;
+    keys: {
+      p256dh: string;
+      auth: string;
+    };
+  }): Promise<{ message: string }> {
+    return this.request<{ message: string }>('/api/push-subscriptions', {
+      method: 'POST',
+      body: JSON.stringify(subscriptionData),
+    });
+  }
+
+  async removePushSubscription(operatorId: string, endpoint: string): Promise<{ message: string }> {
+    const params = new URLSearchParams({
+      operatorId,
+      endpoint,
+    });
+    
+    return this.request<{ message: string }>(`/api/push-subscriptions?${params}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getPushSubscriptions(operatorId: string): Promise<any[]> {
+    return this.request<any[]>(`/api/push-subscriptions/${operatorId}`);
+  }
+
+  // Operator equipment endpoints
+
+  async getOperatorEquipment(operatorId: string): Promise<{ equipment: Equipment[] }> {
+    return this.request<{ equipment: Equipment[] }>(`/api/operators/${operatorId}/equipment`);
+  }
+
+  async updateOperatorEquipment(operatorId: string, equipmentIds: string[]): Promise<{
+    success: boolean;
+    message: string;
+    equipmentCount: number;
+  }> {
+    return this.request(`/api/operators/${operatorId}/equipment`, {
+      method: 'PUT',
+      body: JSON.stringify({ EquipmentIds: equipmentIds }),
     });
   }
 }

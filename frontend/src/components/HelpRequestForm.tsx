@@ -783,7 +783,7 @@ export default function HelpRequestForm({ onSubmit, initialFromLocation, initial
             type="button"
             onClick={() => {
               setIsSelectingStart(false)
-              setIsFromLocationFromGPS(false) // Lokalizacja ustawiona ręcznie
+              setIsFromLocationFromGPS(false) // Location set manually
               if (fromLocation) {
                 setLocationError(null)
               }
