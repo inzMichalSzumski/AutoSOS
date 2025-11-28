@@ -68,14 +68,7 @@ public static class OperatorEquipmentEndpoints
                 return Results.NotFound(new { error = "Operator not found" });
             }
 
-            // Remove all current equipment
-            var currentEquipment = await db.OperatorEquipment
-                .Where(oe => oe.OperatorId == operatorGuid)
-                .ToListAsync();
-
-            db.OperatorEquipment.RemoveRange(currentEquipment);
-
-            // Verify all equipment exists in a single query (more efficient than checking each one separately)
+            // Verify all equipment exists in a single query BEFORE making any changes to DbContext
             var existingEquipmentIds = await db.Equipment
                 .Where(e => dto.EquipmentIds.Contains(e.Id))
                 .Select(e => e.Id)
@@ -87,6 +80,14 @@ public static class OperatorEquipmentEndpoints
             {
                 return Results.BadRequest(new { error = $"Equipment with IDs not found: {string.Join(", ", invalidEquipmentIds)}" });
             }
+
+            // All validations passed - now safe to modify DbContext
+            // Remove all current equipment
+            var currentEquipment = await db.OperatorEquipment
+                .Where(oe => oe.OperatorId == operatorGuid)
+                .ToListAsync();
+
+            db.OperatorEquipment.RemoveRange(currentEquipment);
 
             // Add new equipment
             foreach (var equipmentId in dto.EquipmentIds)
