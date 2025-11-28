@@ -109,7 +109,7 @@ public class RequestNotificationService : BackgroundService
                 {
                     request.Id,
                     message = "Nie udało się znaleźć dostępnej pomocy. Spróbuj ponownie później."
-                });
+                }, cancellationToken);
 
                 _logger.LogInformation($"Request {request.Id} timed out after {expansionNumber} expansions");
                 continue;
@@ -278,7 +278,7 @@ public class RequestNotificationService : BackgroundService
                 offer.Price,
                 offer.EstimatedTimeMinutes,
                 OperatorName = operator_.Name
-            });
+            }, cancellationToken);
 
             _logger.LogInformation($"Created mock offer for request {request.Id} from operator {operator_.Name}");
         }

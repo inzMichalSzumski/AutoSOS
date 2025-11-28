@@ -66,7 +66,8 @@ public static class OperatorEndpoints
         group.MapGet("/{id}", async (
             Guid id,
             AutoSOSDbContext db,
-            HttpContext context) =>
+            HttpContext context,
+            CancellationToken cancellationToken) =>
         {
             // Get operatorId from JWT token
             var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
@@ -83,7 +84,7 @@ public static class OperatorEndpoints
 
             var operatorEntity = await db.Operators
                 .Include(o => o.User)
-                .FirstOrDefaultAsync(o => o.Id == id);
+                .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
             if (operatorEntity == null)
             {
@@ -127,7 +128,7 @@ public static class OperatorEndpoints
                 return Results.Forbid();
             }
 
-            var operatorEntity = await db.Operators.FindAsync(id);
+            var operatorEntity = await db.Operators.FindAsync(new object[] { id }, cancellationToken);
             if (operatorEntity == null)
             {
                 return Results.NotFound(new { error = "Operator not found" });
@@ -165,7 +166,7 @@ public static class OperatorEndpoints
                 return Results.Forbid();
             }
 
-            var operatorEntity = await db.Operators.FindAsync(id);
+            var operatorEntity = await db.Operators.FindAsync(new object[] { id }, cancellationToken);
             if (operatorEntity == null)
             {
                 return Results.NotFound(new { error = "Operator not found" });

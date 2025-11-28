@@ -64,7 +64,7 @@ public static class RequestEndpoints
                 request.Id,
                 request.Status,
                 request.CreatedAt
-            });
+            }, cancellationToken);
 
             // Notifications to operators will be sent by RequestNotificationService
             // (Background Service checks every 5 seconds and sends notifications)
@@ -81,9 +81,9 @@ public static class RequestEndpoints
         .WithOpenApi();
 
         // GET /api/requests/{id} - Get a specific request
-        group.MapGet("/{id:guid}", async (Guid id, AutoSOSDbContext db) =>
+        group.MapGet("/{id:guid}", async (Guid id, AutoSOSDbContext db, CancellationToken cancellationToken) =>
         {
-            var request = await db.Requests.FindAsync(id);
+            var request = await db.Requests.FindAsync(new object[] { id }, cancellationToken);
 
             if (request == null)
                 return Results.NotFound();
@@ -113,7 +113,7 @@ public static class RequestEndpoints
             IHubContext<RequestHub> hub,
             CancellationToken cancellationToken) =>
         {
-            var request = await db.Requests.FindAsync(id);
+            var request = await db.Requests.FindAsync(new object[] { id }, cancellationToken);
             
             if (request == null)
                 return Results.NotFound(new { error = "Request not found" });
@@ -140,7 +140,7 @@ public static class RequestEndpoints
                 request.Id,
                 request.Status,
                 message = "Request has been cancelled"
-            });
+            }, cancellationToken);
 
             return Results.Ok(new
             {

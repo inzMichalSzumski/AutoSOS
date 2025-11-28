@@ -21,11 +21,11 @@ public static class OfferEndpoints
             IHubContext<RequestHub> hub,
             CancellationToken cancellationToken) =>
         {
-            var request = await db.Requests.FindAsync(dto.RequestId);
+            var request = await db.Requests.FindAsync(new object[] { dto.RequestId }, cancellationToken);
             if (request == null)
                 return Results.NotFound(new { error = "Request not found" });
 
-            var operator_ = await db.Operators.FindAsync(dto.OperatorId);
+            var operator_ = await db.Operators.FindAsync(new object[] { dto.OperatorId }, cancellationToken);
             if (operator_ == null || !operator_.IsAvailable)
                 return Results.BadRequest(new { error = "Operator not found or not available" });
 
@@ -53,7 +53,7 @@ public static class OfferEndpoints
                 offer.Price,
                 offer.EstimatedTimeMinutes,
                 OperatorName = operator_.Name
-            });
+            }, cancellationToken);
 
             return Results.Created($"/api/offers/{offer.Id}", new
             {
@@ -110,7 +110,7 @@ public static class OfferEndpoints
                 offer.Price,
                 OperatorName = offer.Operator.Name,
                 OperatorPhone = offer.Operator.Phone
-            });
+            }, cancellationToken);
 
             return Results.Ok(new
             {
