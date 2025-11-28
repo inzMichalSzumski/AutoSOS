@@ -60,6 +60,15 @@ class PushNotificationService {
       return null
     }
 
+    // Validate VAPID public key is configured
+    if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.trim() === '') {
+      console.error(
+        'VAPID public key is not configured. Please set VITE_VAPID_PUBLIC_KEY environment variable. ' +
+        'See docs/WEB_PUSH_SETUP.md for instructions on generating VAPID keys.'
+      )
+      return null
+    }
+
     try {
       // Check if subscription already exists
       let subscription = await this.registration.pushManager.getSubscription()
