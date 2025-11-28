@@ -86,9 +86,16 @@ export default function OperatorApp() {
     
     return () => {
       clearInterval(interval)
-      if (connection) {
-        connection.off('NewRequest')
+      // Remove event listener and disconnect SignalR connection to prevent memory leaks
+      // Get connection from service to ensure we have the current instance
+      const currentConnection = signalRService.getConnection()
+      if (currentConnection) {
+        currentConnection.off('NewRequest')
       }
+      // Properly disconnect SignalR connection
+      signalRService.disconnect().catch(err => 
+        console.error('Error disconnecting SignalR:', err)
+      )
     }
   }, [operatorId, operatorLocation])
 
