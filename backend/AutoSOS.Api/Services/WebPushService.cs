@@ -2,9 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using AutoSOS.Api.Data;
 using AutoSOS.Api.Models;
 using System.Text.Json;
-using System.Net.Http.Headers;
-using System.Security.Cryptography;
-using System.Text;
+using WebPush;
 
 namespace AutoSOS.Api.Services;
 
@@ -16,23 +14,21 @@ public class WebPushService
 {
     private readonly ILogger<WebPushService> _logger;
     private readonly IConfiguration _configuration;
-    private readonly HttpClient _httpClient;
+    private readonly WebPushClient _webPushClient;
 
     // VAPID keys - should be generated once and stored in configuration
-    // For now, we'll use placeholder values
-    // TODO: Generate real VAPID keys using: npx web-push generate-vapid-keys
+    // Generate real VAPID keys using: npx web-push generate-vapid-keys
     private readonly string _vapidPublicKey;
     private readonly string _vapidPrivateKey;
     private readonly string _vapidSubject;
 
     public WebPushService(
         ILogger<WebPushService> logger,
-        IConfiguration configuration,
-        IHttpClientFactory httpClientFactory)
+        IConfiguration configuration)
     {
         _logger = logger;
         _configuration = configuration;
-        _httpClient = httpClientFactory.CreateClient();
+        _webPushClient = new WebPushClient();
 
         // Load VAPID keys from configuration
         _vapidPublicKey = _configuration["WebPush:VapidPublicKey"] ?? string.Empty;
@@ -112,7 +108,7 @@ public class WebPushService
     /// Send push notification to a specific subscription
     /// </summary>
     private async Task<bool> SendPushNotificationAsync(
-        PushSubscription subscription,
+        Models.PushSubscription subscription,
         object payload)
     {
         if (string.IsNullOrEmpty(_vapidPublicKey) || string.IsNullOrEmpty(_vapidPrivateKey))
@@ -125,20 +121,42 @@ public class WebPushService
         {
             var payloadJson = JsonSerializer.Serialize(payload);
             
-            // For now, we'll use a simplified approach
-            // In production, you should use a proper Web Push library like WebPush-NetCore
-            // or implement the full Web Push Protocol with encryption
-            
-            _logger.LogInformation($"Would send push notification to {subscription.Endpoint}");
-            _logger.LogInformation($"Payload: {payloadJson}");
-            
-            // TODO: Implement actual Web Push sending with encryption
-            // This requires:
-            // 1. Encrypting the payload using P256DH and Auth keys
-            // 2. Creating VAPID authentication headers
-            // 3. Sending POST request to the subscription endpoint
-            
+            // Create push subscription object for WebPush library
+            var pushSubscription = new WebPush.PushSubscription(
+                subscription.Endpoint,
+                subscription.P256dhKey,
+                subscription.AuthKey
+            );
+
+            // Create VAPID details
+            var vapidDetails = new VapidDetails(
+                _vapidSubject,
+                _vapidPublicKey,
+                _vapidPrivateKey
+            );
+
+            // Send the push notification
+            await _webPushClient.SendNotificationAsync(
+                pushSubscription,
+                payloadJson,
+                vapidDetails
+            );
+
+            _logger.LogInformation($"Successfully sent push notification to {subscription.Endpoint}");
             return true;
+        }
+        catch (WebPushException ex)
+        {
+            _logger.LogError(ex, $"WebPush error sending notification to {subscription.Endpoint}. Status: {ex.StatusCode}");
+            
+            // If subscription is invalid (410 Gone or 404 Not Found), throw to mark as inactive
+            if (ex.StatusCode == System.Net.HttpStatusCode.Gone || 
+                ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                throw new Exception($"410 - Subscription no longer valid", ex);
+            }
+            
+            return false;
         }
         catch (Exception ex)
         {

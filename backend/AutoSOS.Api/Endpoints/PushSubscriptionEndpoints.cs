@@ -13,11 +13,18 @@ public static class PushSubscriptionEndpoints
             .WithTags("Push Subscriptions");
 
         // Save push subscription
-        group.MapPost("/", async (SavePushSubscriptionDto dto, AutoSOSDbContext db) =>
+        group.MapPost("/", async (SavePushSubscriptionDto dto, AutoSOSDbContext db, HttpContext context) =>
         {
             if (!Guid.TryParse(dto.OperatorId, out var operatorId))
             {
                 return Results.BadRequest(new { error = "Invalid operator ID" });
+            }
+
+            // Verify operator is creating their own subscription
+            var tokenOperatorId = context.User.FindFirst("OperatorId")?.Value;
+            if (tokenOperatorId != dto.OperatorId)
+            {
+                return Results.Forbid();
             }
 
             // Check if operator exists
@@ -63,11 +70,18 @@ public static class PushSubscriptionEndpoints
         .RequireAuthorization();
 
         // Remove push subscription
-        group.MapDelete("/", async (string operatorId, string endpoint, AutoSOSDbContext db) =>
+        group.MapDelete("/", async (string operatorId, string endpoint, AutoSOSDbContext db, HttpContext context) =>
         {
             if (!Guid.TryParse(operatorId, out var operatorGuid))
             {
                 return Results.BadRequest(new { error = "Invalid operator ID" });
+            }
+
+            // Verify operator is deleting their own subscription
+            var tokenOperatorId = context.User.FindFirst("OperatorId")?.Value;
+            if (tokenOperatorId != operatorId)
+            {
+                return Results.Forbid();
             }
 
             var subscription = await db.PushSubscriptions
@@ -86,11 +100,18 @@ public static class PushSubscriptionEndpoints
         .RequireAuthorization();
 
         // Get operator's subscriptions (for debugging)
-        group.MapGet("/{operatorId}", async (string operatorId, AutoSOSDbContext db) =>
+        group.MapGet("/{operatorId}", async (string operatorId, AutoSOSDbContext db, HttpContext context) =>
         {
             if (!Guid.TryParse(operatorId, out var operatorGuid))
             {
                 return Results.BadRequest(new { error = "Invalid operator ID" });
+            }
+
+            // Verify operator is requesting their own subscriptions
+            var tokenOperatorId = context.User.FindFirst("OperatorId")?.Value;
+            if (tokenOperatorId != operatorId)
+            {
+                return Results.Forbid();
             }
 
             var subscriptions = await db.PushSubscriptions

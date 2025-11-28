@@ -157,14 +157,14 @@ public static class DatabaseInitializer
             {
                 // Mechanic has jumpstarter and mobile tire service
                 equipmentToAssign = allEquipment
-                    .Where(e => e.Name == "Jumpstarter" || e.Name == "Mobilna wulkanizacja")
+                    .Where(e => e.Name == "Rozruch" || e.Name == "Mobilna wulkanizacja")
                     .ToList();
             }
             else if (data.VehicleType == "Elektryk samochodowy")
             {
                 // Electrician has only jumpstarter
                 equipmentToAssign = allEquipment
-                    .Where(e => e.Name == "Jumpstarter")
+                    .Where(e => e.Name == "Rozruch")
                     .ToList();
             }
             
