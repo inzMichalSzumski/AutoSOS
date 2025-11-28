@@ -22,7 +22,7 @@ public static class PushSubscriptionEndpoints
 
             // Verify operator is creating their own subscription
             var tokenOperatorId = context.User.FindFirst("OperatorId")?.Value;
-            if (tokenOperatorId != dto.OperatorId)
+            if (string.IsNullOrEmpty(tokenOperatorId) || tokenOperatorId != dto.OperatorId)
             {
                 return Results.Forbid();
             }
@@ -79,7 +79,7 @@ public static class PushSubscriptionEndpoints
 
             // Verify operator is deleting their own subscription
             var tokenOperatorId = context.User.FindFirst("OperatorId")?.Value;
-            if (tokenOperatorId != operatorId)
+            if (string.IsNullOrEmpty(tokenOperatorId) || tokenOperatorId != operatorId)
             {
                 return Results.Forbid();
             }
@@ -109,7 +109,7 @@ public static class PushSubscriptionEndpoints
 
             // Verify operator is requesting their own subscriptions
             var tokenOperatorId = context.User.FindFirst("OperatorId")?.Value;
-            if (tokenOperatorId != operatorId)
+            if (string.IsNullOrEmpty(tokenOperatorId) || tokenOperatorId != operatorId)
             {
                 return Results.Forbid();
             }
