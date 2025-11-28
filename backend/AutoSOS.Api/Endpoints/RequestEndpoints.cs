@@ -24,7 +24,7 @@ public static class RequestEndpoints
         {
             // Find or create User for the customer
             var user = await db.Users
-                .FirstOrDefaultAsync(u => u.PhoneNumber == dto.PhoneNumber && u.Role == UserRole.Customer);
+                .FirstOrDefaultAsync(u => u.PhoneNumber == dto.PhoneNumber && u.Role == UserRole.Customer, cancellationToken);
 
             if (user == null)
             {

@@ -77,7 +77,7 @@ public static class OfferEndpoints
             var offer = await db.Offers
                 .Include(o => o.Request)
                 .Include(o => o.Operator)
-                .FirstOrDefaultAsync(o => o.Id == id);
+                .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
             if (offer == null)
                 return Results.NotFound(new { error = "Offer not found" });
