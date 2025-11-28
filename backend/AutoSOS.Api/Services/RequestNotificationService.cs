@@ -196,7 +196,7 @@ public class RequestNotificationService : BackgroundService
                 }
 
                 // Save all push subscription updates in a single transaction
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation($"Sent notifications for request {request.Id} to {operatorsWithDistance.Count} operators (expansion {expansionNumber})");
             }

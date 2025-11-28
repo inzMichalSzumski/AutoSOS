@@ -110,7 +110,8 @@ public static class OperatorEndpoints
             Guid id,
             UpdateLocationDto dto,
             AutoSOSDbContext db,
-            HttpContext context) =>
+            HttpContext context,
+            CancellationToken cancellationToken) =>
         {
             // Get operatorId from JWT token
             var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
@@ -134,7 +135,7 @@ public static class OperatorEndpoints
             operatorEntity.CurrentLatitude = dto.Latitude;
             operatorEntity.CurrentLongitude = dto.Longitude;
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new { success = true, message = "Location updated" });
         })
@@ -147,7 +148,8 @@ public static class OperatorEndpoints
             Guid id,
             UpdateAvailabilityDto dto,
             AutoSOSDbContext db,
-            HttpContext context) =>
+            HttpContext context,
+            CancellationToken cancellationToken) =>
         {
             // Get operatorId from JWT token
             var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
@@ -170,7 +172,7 @@ public static class OperatorEndpoints
 
             operatorEntity.IsAvailable = dto.IsAvailable;
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new { 
                 success = true, 

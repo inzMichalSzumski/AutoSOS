@@ -47,7 +47,8 @@ public static class OperatorEquipmentEndpoints
             string operatorId,
             UpdateOperatorEquipmentDto dto,
             AutoSOSDbContext db,
-            HttpContext context) =>
+            HttpContext context,
+            CancellationToken cancellationToken) =>
         {
             if (!Guid.TryParse(operatorId, out var operatorGuid))
             {
@@ -99,7 +100,7 @@ public static class OperatorEquipmentEndpoints
                 });
             }
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new
             {

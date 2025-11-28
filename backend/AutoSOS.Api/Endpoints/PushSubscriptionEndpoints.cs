@@ -13,7 +13,7 @@ public static class PushSubscriptionEndpoints
             .WithTags("Push Subscriptions");
 
         // Save push subscription
-        group.MapPost("/", async (SavePushSubscriptionDto dto, AutoSOSDbContext db, HttpContext context) =>
+        group.MapPost("/", async (SavePushSubscriptionDto dto, AutoSOSDbContext db, HttpContext context, CancellationToken cancellationToken) =>
         {
             if (!Guid.TryParse(dto.OperatorId, out var operatorId))
             {
@@ -63,14 +63,14 @@ public static class PushSubscriptionEndpoints
                 db.PushSubscriptions.Add(subscription);
             }
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new { message = "Push subscription saved successfully" });
         })
         .RequireAuthorization();
 
         // Remove push subscription
-        group.MapDelete("/", async (string operatorId, string endpoint, AutoSOSDbContext db, HttpContext context) =>
+        group.MapDelete("/", async (string operatorId, string endpoint, AutoSOSDbContext db, HttpContext context, CancellationToken cancellationToken) =>
         {
             if (!Guid.TryParse(operatorId, out var operatorGuid))
             {
@@ -93,7 +93,7 @@ public static class PushSubscriptionEndpoints
             }
 
             subscription.IsActive = false;
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new { message = "Push subscription removed successfully" });
         })

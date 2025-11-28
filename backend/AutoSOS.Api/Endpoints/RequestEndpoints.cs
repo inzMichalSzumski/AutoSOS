@@ -19,7 +19,8 @@ public static class RequestEndpoints
         group.MapPost("/", async (
             CreateRequestDto dto,
             AutoSOSDbContext db,
-            IHubContext<RequestHub> hub) =>
+            IHubContext<RequestHub> hub,
+            CancellationToken cancellationToken) =>
         {
             // Find or create User for the customer
             var user = await db.Users
@@ -36,7 +37,7 @@ public static class RequestEndpoints
                     CreatedAt = DateTime.UtcNow
                 };
                 db.Users.Add(user);
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(cancellationToken);
             }
 
             var request = new Request
@@ -55,7 +56,7 @@ public static class RequestEndpoints
             };
 
             db.Requests.Add(request);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             // Notify client via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("RequestCreated", new
@@ -109,7 +110,8 @@ public static class RequestEndpoints
             Guid id,
             CancelRequestDto dto,
             AutoSOSDbContext db,
-            IHubContext<RequestHub> hub) =>
+            IHubContext<RequestHub> hub,
+            CancellationToken cancellationToken) =>
         {
             var request = await db.Requests.FindAsync(id);
             
@@ -130,7 +132,7 @@ public static class RequestEndpoints
 
             request.Status = RequestStatus.Cancelled;
             request.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             // Notify client via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("RequestCancelled", new

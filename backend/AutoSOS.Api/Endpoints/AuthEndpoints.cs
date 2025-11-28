@@ -20,7 +20,8 @@ public static class AuthEndpoints
         // POST /api/auth/register - Register operator
         group.MapPost("/register", async (
             RegisterOperatorDto dto,
-            AutoSOSDbContext db) =>
+            AutoSOSDbContext db,
+            CancellationToken cancellationToken) =>
         {
             // Validation
             if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
@@ -86,7 +87,7 @@ public static class AuthEndpoints
 
             db.Users.Add(user);
             db.Operators.Add(operatorEntity);
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new
             {

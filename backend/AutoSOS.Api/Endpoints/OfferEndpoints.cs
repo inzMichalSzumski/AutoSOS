@@ -18,7 +18,8 @@ public static class OfferEndpoints
         group.MapPost("/", async (
             CreateOfferDto dto,
             AutoSOSDbContext db,
-            IHubContext<RequestHub> hub) =>
+            IHubContext<RequestHub> hub,
+            CancellationToken cancellationToken) =>
         {
             var request = await db.Requests.FindAsync(dto.RequestId);
             if (request == null)
@@ -43,7 +44,7 @@ public static class OfferEndpoints
             request.Status = RequestStatus.OfferReceived;
             request.UpdatedAt = DateTime.UtcNow;
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             // Notify via SignalR
             await hub.Clients.Group($"request-{request.Id}").SendAsync("OfferReceived", new
@@ -70,7 +71,8 @@ public static class OfferEndpoints
         group.MapPost("/{id:guid}/accept", async (
             Guid id,
             AutoSOSDbContext db,
-            IHubContext<RequestHub> hub) =>
+            IHubContext<RequestHub> hub,
+            CancellationToken cancellationToken) =>
         {
             var offer = await db.Offers
                 .Include(o => o.Request)
@@ -99,7 +101,7 @@ public static class OfferEndpoints
                 otherOffer.Status = OfferStatus.Rejected;
             }
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
 
             // Notify via SignalR
             await hub.Clients.Group($"request-{offer.Request.Id}").SendAsync("OfferAccepted", new
