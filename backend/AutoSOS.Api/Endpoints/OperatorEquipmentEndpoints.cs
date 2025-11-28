@@ -75,14 +75,21 @@ public static class OperatorEquipmentEndpoints
                 return Results.BadRequest(new { error = "EquipmentIds cannot be null. Use an empty array to remove all equipment." });
             }
 
+            // Deduplicate equipment IDs to prevent database constraint violations
+            var uniqueEquipmentIds = dto.EquipmentIds.Distinct().ToList();
+            if (uniqueEquipmentIds.Count != dto.EquipmentIds.Count)
+            {
+                return Results.BadRequest(new { error = "Duplicate equipment IDs are not allowed." });
+            }
+
             // Verify all equipment exists in a single query BEFORE making any changes to DbContext
             var existingEquipmentIds = await db.Equipment
-                .Where(e => dto.EquipmentIds.Contains(e.Id))
+                .Where(e => uniqueEquipmentIds.Contains(e.Id))
                 .Select(e => e.Id)
                 .ToListAsync(cancellationToken);
 
             // Check if any equipment IDs are invalid
-            var invalidEquipmentIds = dto.EquipmentIds.Except(existingEquipmentIds).ToList();
+            var invalidEquipmentIds = uniqueEquipmentIds.Except(existingEquipmentIds).ToList();
             if (invalidEquipmentIds.Any())
             {
                 return Results.BadRequest(new { error = $"Equipment with IDs not found: {string.Join(", ", invalidEquipmentIds)}" });
@@ -97,7 +104,7 @@ public static class OperatorEquipmentEndpoints
             db.OperatorEquipment.RemoveRange(currentEquipment);
 
             // Add new equipment
-            foreach (var equipmentId in dto.EquipmentIds)
+            foreach (var equipmentId in uniqueEquipmentIds)
             {
                 db.OperatorEquipment.Add(new Models.OperatorEquipment
                 {
@@ -112,7 +119,7 @@ public static class OperatorEquipmentEndpoints
             {
                 success = true,
                 message = "Equipment updated successfully",
-                equipmentCount = dto.EquipmentIds.Count
+                equipmentCount = uniqueEquipmentIds.Count
             });
         });
     }
