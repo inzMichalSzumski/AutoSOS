@@ -147,7 +147,11 @@ public class RequestNotificationService : BackgroundService
                 .ToList();
 
             // Send notifications to operators (only if this is the first notification or expansion)
-            if (expansionNumber == 0 || secondsSinceCreation % NotificationTimeoutSeconds < 5)
+            // Check if we're within the expansion window (0-5 seconds after expansion time)
+            // Using <= 5 instead of < 5 to ensure we catch expansions even if timing is slightly off
+            // Note: This may send duplicate notifications if checked twice in the same window,
+            // but that's preferable to missing entire expansions
+            if (expansionNumber == 0 || secondsSinceCreation % NotificationTimeoutSeconds <= 5)
             {
                 var notificationData = new
                 {
