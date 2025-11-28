@@ -69,6 +69,12 @@ public static class OperatorEquipmentEndpoints
                 return Results.NotFound(new { error = "Operator not found" });
             }
 
+            // Validate EquipmentIds is not null
+            if (dto.EquipmentIds == null)
+            {
+                return Results.BadRequest(new { error = "EquipmentIds cannot be null. Use an empty array to remove all equipment." });
+            }
+
             // Verify all equipment exists in a single query BEFORE making any changes to DbContext
             var existingEquipmentIds = await db.Equipment
                 .Where(e => dto.EquipmentIds.Contains(e.Id))
