@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet'
 import { Icon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -122,6 +122,14 @@ export default function OperatorLocationSetup({
     setLocationError(null)
   }
 
+  // Memoize the location change handler to prevent unnecessary re-renders
+  const handleLocationChange = useCallback((loc: Location) => {
+    setMapCenter(loc)
+    if (isManualSelection) {
+      setLocation(loc)
+    }
+  }, [isManualSelection])
+
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
       {/* Header */}
@@ -231,12 +239,7 @@ export default function OperatorLocationSetup({
 
             {/* Track map center for manual selection */}
             <MapCenterTracker
-              onLocationChange={(loc) => {
-                setMapCenter(loc)
-                if (isManualSelection) {
-                  setLocation(loc)
-                }
-              }}
+              onLocationChange={handleLocationChange}
               shouldUpdate={isManualSelection}
             />
           </MapContainer>
