@@ -39,10 +39,16 @@ public class WebPushService
     /// <summary>
     /// Send push notification to specific operator
     /// </summary>
+    /// <param name="db">Database context</param>
+    /// <param name="operatorId">Operator ID to send notification to</param>
+    /// <param name="notificationData">Notification payload</param>
+    /// <param name="saveChanges">Whether to save changes to database immediately (default: true)</param>
+    /// <returns>True if notification was sent successfully to at least one subscription</returns>
     public async Task<bool> SendNotificationToOperatorAsync(
         AutoSOSDbContext db,
         Guid operatorId,
-        object notificationData)
+        object notificationData,
+        bool saveChanges = true)
     {
         var subscriptions = await db.PushSubscriptions
             .Where(ps => ps.OperatorId == operatorId && ps.IsActive)
@@ -78,13 +84,22 @@ public class WebPushService
             }
         }
 
-        await db.SaveChangesAsync();
+        if (saveChanges)
+        {
+            await db.SaveChangesAsync();
+        }
+
         return success;
     }
 
     /// <summary>
     /// Send push notification to multiple operators
+    /// Batches database saves for efficiency - only saves once after all notifications are sent
     /// </summary>
+    /// <param name="db">Database context</param>
+    /// <param name="operatorIds">Collection of operator IDs to send notifications to</param>
+    /// <param name="notificationData">Notification payload</param>
+    /// <returns>Number of operators successfully notified</returns>
     public async Task<int> SendNotificationToOperatorsAsync(
         AutoSOSDbContext db,
         IEnumerable<Guid> operatorIds,
@@ -92,14 +107,18 @@ public class WebPushService
     {
         var successCount = 0;
 
+        // Send to all operators without saving changes after each one
         foreach (var operatorId in operatorIds)
         {
-            var sent = await SendNotificationToOperatorAsync(db, operatorId, notificationData);
+            var sent = await SendNotificationToOperatorAsync(db, operatorId, notificationData, saveChanges: false);
             if (sent)
             {
                 successCount++;
             }
         }
+
+        // Save all changes once at the end
+        await db.SaveChangesAsync();
 
         return successCount;
     }

@@ -75,16 +75,22 @@ public static class OperatorEquipmentEndpoints
 
             db.OperatorEquipment.RemoveRange(currentEquipment);
 
+            // Verify all equipment exists in a single query (more efficient than checking each one separately)
+            var existingEquipmentIds = await db.Equipment
+                .Where(e => dto.EquipmentIds.Contains(e.Id))
+                .Select(e => e.Id)
+                .ToListAsync();
+
+            // Check if any equipment IDs are invalid
+            var invalidEquipmentIds = dto.EquipmentIds.Except(existingEquipmentIds).ToList();
+            if (invalidEquipmentIds.Any())
+            {
+                return Results.BadRequest(new { error = $"Equipment with IDs not found: {string.Join(", ", invalidEquipmentIds)}" });
+            }
+
             // Add new equipment
             foreach (var equipmentId in dto.EquipmentIds)
             {
-                // Verify equipment exists
-                var equipmentExists = await db.Equipment.AnyAsync(e => e.Id == equipmentId);
-                if (!equipmentExists)
-                {
-                    return Results.BadRequest(new { error = $"Equipment with ID {equipmentId} not found" });
-                }
-
                 db.OperatorEquipment.Add(new Models.OperatorEquipment
                 {
                     OperatorId = operatorGuid,

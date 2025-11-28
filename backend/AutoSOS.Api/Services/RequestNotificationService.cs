@@ -162,6 +162,7 @@ public class RequestNotificationService : BackgroundService
                     Distance = 0.0 // Will be calculated for each operator
                 };
 
+                // Send SignalR and Web Push notifications to all operators
                 foreach (var op in operatorsWithDistance)
                 {
                     var operatorNotification = new
@@ -181,6 +182,7 @@ public class RequestNotificationService : BackgroundService
                     await hub.Clients.Group($"operator-{op.Operator.Id}").SendAsync("NewRequest", operatorNotification);
 
                     // Send Web Push notification (works even when tab is closed)
+                    // Note: saveChanges=false to batch database updates
                     var pushPayload = new
                     {
                         title = "AutoSOS - Nowe zgłoszenie",
@@ -190,8 +192,11 @@ public class RequestNotificationService : BackgroundService
                         phoneNumber = request.PhoneNumber
                     };
 
-                    await _webPushService.SendNotificationToOperatorAsync(db, op.Operator.Id, pushPayload);
+                    await _webPushService.SendNotificationToOperatorAsync(db, op.Operator.Id, pushPayload, saveChanges: false);
                 }
+
+                // Save all push subscription updates in a single transaction
+                await db.SaveChangesAsync();
 
                 _logger.LogInformation($"Sent notifications for request {request.Id} to {operatorsWithDistance.Count} operators (expansion {expansionNumber})");
             }
