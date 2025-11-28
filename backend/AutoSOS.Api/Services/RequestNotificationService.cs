@@ -96,6 +96,7 @@ public class RequestNotificationService : BackgroundService
             }
 
             // Calculate how many expansions have already occurred (based on time)
+            // Integer division: 0-29s = expansion 0, 30-59s = expansion 1, 60-89s = expansion 2, etc.
             var expansionNumber = secondsSinceCreation / NotificationTimeoutSeconds;
 
             if (expansionNumber > MaxExpansions)
@@ -112,6 +113,18 @@ public class RequestNotificationService : BackgroundService
                 }, cancellationToken);
 
                 _logger.LogInformation($"Request {request.Id} timed out after {expansionNumber} expansions");
+                continue;
+            }
+
+            // Check if we need to send notifications for this expansion
+            // Only send if we haven't already notified for this specific expansion number
+            // This prevents duplicate notifications when the service runs multiple times
+            // during the same expansion window (e.g., at 2s, 7s, 12s all within expansion 0)
+            var lastNotifiedExpansion = request.LastNotifiedExpansion ?? -1;
+            
+            if (expansionNumber <= lastNotifiedExpansion)
+            {
+                // Already notified for this expansion or later, skip
                 continue;
             }
 
@@ -146,64 +159,63 @@ public class RequestNotificationService : BackgroundService
                 .Take(operatorsToNotify)
                 .ToList();
 
-            // Send notifications to operators (only if this is the first notification or expansion)
-            // Check if we're within the expansion window (0-5 seconds after expansion time)
-            // Using <= 5 instead of < 5 to ensure we catch expansions even if timing is slightly off
-            // Note: This may send duplicate notifications if checked twice in the same window,
-            // but that's preferable to missing entire expansions
-            if (expansionNumber == 0 || secondsSinceCreation % NotificationTimeoutSeconds <= 5)
+            // Send notifications to operators for this expansion
+            // At this point we know expansionNumber > lastNotifiedExpansion (we already checked above)
+            var notificationData = new
             {
-                var notificationData = new
+                request.Id,
+                request.PhoneNumber,
+                request.FromLatitude,
+                request.FromLongitude,
+                request.ToLatitude,
+                request.ToLongitude,
+                request.Description,
+                request.CreatedAt,
+                Distance = 0.0 // Will be calculated for each operator
+            };
+
+            // Send SignalR and Web Push notifications to all operators
+            foreach (var op in operatorsWithDistance)
+            {
+                var operatorNotification = new
                 {
-                    request.Id,
-                    request.PhoneNumber,
-                    request.FromLatitude,
-                    request.FromLongitude,
-                    request.ToLatitude,
-                    request.ToLongitude,
-                    request.Description,
-                    request.CreatedAt,
-                    Distance = 0.0 // Will be calculated for each operator
+                    notificationData.Id,
+                    notificationData.PhoneNumber,
+                    notificationData.FromLatitude,
+                    notificationData.FromLongitude,
+                    notificationData.ToLatitude,
+                    notificationData.ToLongitude,
+                    notificationData.Description,
+                    notificationData.CreatedAt,
+                    Distance = Math.Round(op.Distance, 1)
                 };
 
-                // Send SignalR and Web Push notifications to all operators
-                foreach (var op in operatorsWithDistance)
+                // Send notification via SignalR (for active connections)
+                await hub.Clients.Group($"operator-{op.Operator.Id}").SendAsync("NewRequest", operatorNotification, cancellationToken);
+
+                // Send Web Push notification (works even when tab is closed)
+                // Note: saveChanges=false to batch database updates
+                var pushPayload = new
                 {
-                    var operatorNotification = new
-                    {
-                        notificationData.Id,
-                        notificationData.PhoneNumber,
-                        notificationData.FromLatitude,
-                        notificationData.FromLongitude,
-                        notificationData.ToLatitude,
-                        notificationData.ToLongitude,
-                        notificationData.Description,
-                        notificationData.CreatedAt,
-                        Distance = Math.Round(op.Distance, 1)
-                    };
+                    title = "AutoSOS - Nowe zgłoszenie",
+                    body = $"Nowe zgłoszenie w odległości {Math.Round(op.Distance, 1)} km",
+                    requestId = request.Id.ToString(),
+                    distance = Math.Round(op.Distance, 1),
+                    phoneNumber = request.PhoneNumber
+                };
 
-                    // Send notification via SignalR (for active connections)
-                    await hub.Clients.Group($"operator-{op.Operator.Id}").SendAsync("NewRequest", operatorNotification, cancellationToken);
-
-                    // Send Web Push notification (works even when tab is closed)
-                    // Note: saveChanges=false to batch database updates
-                    var pushPayload = new
-                    {
-                        title = "AutoSOS - Nowe zgłoszenie",
-                        body = $"Nowe zgłoszenie w odległości {Math.Round(op.Distance, 1)} km",
-                        requestId = request.Id.ToString(),
-                        distance = Math.Round(op.Distance, 1),
-                        phoneNumber = request.PhoneNumber
-                    };
-
-                    await _webPushService.SendNotificationToOperatorAsync(db, op.Operator.Id, pushPayload, saveChanges: false, cancellationToken);
-                }
-
-                // Save all push subscription updates in a single transaction
-                await db.SaveChangesAsync(cancellationToken);
-
-                _logger.LogInformation($"Sent notifications for request {request.Id} to {operatorsWithDistance.Count} operators (expansion {expansionNumber})");
+                await _webPushService.SendNotificationToOperatorAsync(db, op.Operator.Id, pushPayload, saveChanges: false, cancellationToken);
             }
+
+            // Mark this expansion as notified to prevent duplicate notifications
+            // This ensures we only send notifications once per expansion window
+            request.LastNotifiedExpansion = expansionNumber;
+            request.UpdatedAt = DateTime.UtcNow;
+
+            // Save all push subscription updates in a single transaction
+            await db.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation($"Sent notifications for request {request.Id} to {operatorsWithDistance.Count} operators (expansion {expansionNumber})");
         }
     }
 
