@@ -13,7 +13,7 @@ public static class OperatorEquipmentEndpoints
             .RequireAuthorization();
 
         // GET /api/operators/{operatorId}/equipment - Get operator's equipment
-        group.MapGet("/", async (string operatorId, AutoSOSDbContext db, HttpContext context) =>
+        group.MapGet("/", async (string operatorId, AutoSOSDbContext db, HttpContext context, CancellationToken cancellationToken) =>
         {
             if (!Guid.TryParse(operatorId, out var operatorGuid))
             {
@@ -37,7 +37,7 @@ public static class OperatorEquipmentEndpoints
                     oe.Equipment.Description,
                     oe.Equipment.RequiresTransport
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             return Results.Ok(new { equipment = operatorEquipment });
         });
@@ -63,7 +63,7 @@ public static class OperatorEquipmentEndpoints
             }
 
             // Verify operator exists
-            var operatorExists = await db.Operators.AnyAsync(o => o.Id == operatorGuid);
+            var operatorExists = await db.Operators.AnyAsync(o => o.Id == operatorGuid, cancellationToken);
             if (!operatorExists)
             {
                 return Results.NotFound(new { error = "Operator not found" });
@@ -73,7 +73,7 @@ public static class OperatorEquipmentEndpoints
             var existingEquipmentIds = await db.Equipment
                 .Where(e => dto.EquipmentIds.Contains(e.Id))
                 .Select(e => e.Id)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             // Check if any equipment IDs are invalid
             var invalidEquipmentIds = dto.EquipmentIds.Except(existingEquipmentIds).ToList();
@@ -86,7 +86,7 @@ public static class OperatorEquipmentEndpoints
             // Remove all current equipment
             var currentEquipment = await db.OperatorEquipment
                 .Where(oe => oe.OperatorId == operatorGuid)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             db.OperatorEquipment.RemoveRange(currentEquipment);
 

@@ -73,7 +73,7 @@ public static class AuthEndpoints
             {
                 var equipment = await db.Equipment
                     .Where(e => dto.EquipmentIds.Contains(e.Id))
-                    .ToListAsync();
+                    .ToListAsync(cancellationToken);
                 
                 foreach (var eq in equipment)
                 {

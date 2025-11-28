@@ -19,12 +19,13 @@ public static class OperatorEndpoints
             double lat,
             double lng,
             AutoSOSDbContext db,
-            double radius = 20) =>
+            double radius = 20,
+            CancellationToken cancellationToken = default) =>
         {
             var operators = await db.Operators
                 .Include(o => o.User)
                 .Where(o => o.IsAvailable && o.CurrentLatitude.HasValue && o.CurrentLongitude.HasValue)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             var operatorsInRadius = operators
                 .Select(op => new

@@ -155,7 +155,8 @@ public static class RequestEndpoints
         // GET /api/requests/available - Get available requests for operators
         group.MapGet("/available", async (
             AutoSOSDbContext db,
-            HttpContext context) =>
+            HttpContext context,
+            CancellationToken cancellationToken) =>
         {
             // Get operatorId from JWT token
             var operatorIdClaim = context.User.FindFirst("OperatorId")?.Value;
@@ -168,7 +169,7 @@ public static class RequestEndpoints
             var operatorEntity = await db.Operators
                 .Include(o => o.OperatorEquipment)
                     .ThenInclude(oe => oe.Equipment)
-                .FirstOrDefaultAsync(o => o.Id == operatorId);
+                .FirstOrDefaultAsync(o => o.Id == operatorId, cancellationToken);
             
             if (operatorEntity == null || !operatorEntity.IsAvailable || 
                 !operatorEntity.CurrentLatitude.HasValue || !operatorEntity.CurrentLongitude.HasValue)
@@ -185,7 +186,7 @@ public static class RequestEndpoints
             var availableRequests = await db.Requests
                 .Where(r => r.Status == RequestStatus.Pending || r.Status == RequestStatus.Searching)
                 .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             // Calculate distance and filter by service radius and equipment
             var requestsWithDistance = availableRequests

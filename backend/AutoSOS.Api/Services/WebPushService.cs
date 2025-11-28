@@ -43,16 +43,18 @@ public class WebPushService
     /// <param name="operatorId">Operator ID to send notification to</param>
     /// <param name="notificationData">Notification payload</param>
     /// <param name="saveChanges">Whether to save changes to database immediately (default: true)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>True if notification was sent successfully to at least one subscription</returns>
     public async Task<bool> SendNotificationToOperatorAsync(
         AutoSOSDbContext db,
         Guid operatorId,
         object notificationData,
-        bool saveChanges = true)
+        bool saveChanges = true,
+        CancellationToken cancellationToken = default)
     {
         var subscriptions = await db.PushSubscriptions
             .Where(ps => ps.OperatorId == operatorId && ps.IsActive)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         if (!subscriptions.Any())
         {
@@ -65,7 +67,7 @@ public class WebPushService
         {
             try
             {
-                var sent = await SendPushNotificationAsync(subscription, notificationData);
+                var sent = await SendPushNotificationAsync(subscription, notificationData, cancellationToken);
                 if (sent)
                 {
                     subscription.LastUsedAt = DateTime.UtcNow;
@@ -86,7 +88,7 @@ public class WebPushService
 
         if (saveChanges)
         {
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
         }
 
         return success;
@@ -99,18 +101,20 @@ public class WebPushService
     /// <param name="db">Database context</param>
     /// <param name="operatorIds">Collection of operator IDs to send notifications to</param>
     /// <param name="notificationData">Notification payload</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Number of operators successfully notified</returns>
     public async Task<int> SendNotificationToOperatorsAsync(
         AutoSOSDbContext db,
         IEnumerable<Guid> operatorIds,
-        object notificationData)
+        object notificationData,
+        CancellationToken cancellationToken = default)
     {
         var successCount = 0;
 
         // Send to all operators without saving changes after each one
         foreach (var operatorId in operatorIds)
         {
-            var sent = await SendNotificationToOperatorAsync(db, operatorId, notificationData, saveChanges: false);
+            var sent = await SendNotificationToOperatorAsync(db, operatorId, notificationData, saveChanges: false, cancellationToken);
             if (sent)
             {
                 successCount++;
@@ -118,7 +122,7 @@ public class WebPushService
         }
 
         // Save all changes once at the end
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(cancellationToken);
 
         return successCount;
     }
@@ -128,7 +132,8 @@ public class WebPushService
     /// </summary>
     private async Task<bool> SendPushNotificationAsync(
         Models.PushSubscription subscription,
-        object payload)
+        object payload,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(_vapidPublicKey) || string.IsNullOrEmpty(_vapidPrivateKey))
         {
@@ -155,6 +160,7 @@ public class WebPushService
             );
 
             // Send the push notification
+            // Note: WebPush library doesn't support CancellationToken in SendNotificationAsync
             await _webPushClient.SendNotificationAsync(
                 pushSubscription,
                 payloadJson,

@@ -179,7 +179,7 @@ public class RequestNotificationService : BackgroundService
                     };
 
                     // Send notification via SignalR (for active connections)
-                    await hub.Clients.Group($"operator-{op.Operator.Id}").SendAsync("NewRequest", operatorNotification);
+                    await hub.Clients.Group($"operator-{op.Operator.Id}").SendAsync("NewRequest", operatorNotification, cancellationToken);
 
                     // Send Web Push notification (works even when tab is closed)
                     // Note: saveChanges=false to batch database updates
@@ -192,7 +192,7 @@ public class RequestNotificationService : BackgroundService
                         phoneNumber = request.PhoneNumber
                     };
 
-                    await _webPushService.SendNotificationToOperatorAsync(db, op.Operator.Id, pushPayload, saveChanges: false);
+                    await _webPushService.SendNotificationToOperatorAsync(db, op.Operator.Id, pushPayload, saveChanges: false, cancellationToken);
                 }
 
                 // Save all push subscription updates in a single transaction

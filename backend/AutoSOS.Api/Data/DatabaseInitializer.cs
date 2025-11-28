@@ -8,25 +8,25 @@ public static class DatabaseInitializer
     /// <summary>
     /// Applies pending migrations and seeds initial data if needed
     /// </summary>
-    public static async Task InitializeAsync(AutoSOSDbContext db)
+    public static async Task InitializeAsync(AutoSOSDbContext db, CancellationToken cancellationToken = default)
     {
         // Apply pending migrations (Code First approach)
-        await db.Database.MigrateAsync();
+        await db.Database.MigrateAsync(cancellationToken);
         
         // Seed equipment if database is empty
-        if (!await db.Equipment.AnyAsync())
+        if (!await db.Equipment.AnyAsync(cancellationToken))
         {
-            await SeedEquipmentAsync(db);
+            await SeedEquipmentAsync(db, cancellationToken);
         }
         
         // Seed operators if database is empty
-        if (!await db.Operators.AnyAsync())
+        if (!await db.Operators.AnyAsync(cancellationToken))
         {
-            await SeedOperatorsAsync(db);
+            await SeedOperatorsAsync(db, cancellationToken);
         }
     }
     
-    private static async Task SeedEquipmentAsync(AutoSOSDbContext db)
+    private static async Task SeedEquipmentAsync(AutoSOSDbContext db, CancellationToken cancellationToken = default)
     {
         // ========================================
         // TODO: TEMPORARY - Seed data for equipment - to be removed when real data is available
@@ -54,7 +54,7 @@ public static class DatabaseInitializer
             db.Equipment.Add(equipment);
         }
         
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(cancellationToken);
         Console.WriteLine($"✅ Seeded {equipmentData.Length} equipment types to database");
         
         // ========================================
@@ -62,7 +62,7 @@ public static class DatabaseInitializer
         // ========================================
     }
     
-    private static async Task SeedOperatorsAsync(AutoSOSDbContext db)
+    private static async Task SeedOperatorsAsync(AutoSOSDbContext db, CancellationToken cancellationToken = default)
     {
         // ========================================
         // TODO: TEMPORARY - Seed data for operators - to be removed when real operators are available
@@ -145,7 +145,7 @@ public static class DatabaseInitializer
             };
             
             // Determine available equipment based on vehicle type
-            var allEquipment = await db.Equipment.ToListAsync();
+            var allEquipment = await db.Equipment.ToListAsync(cancellationToken);
             var equipmentToAssign = new List<Equipment>();
             
             if (data.VehicleType == "Laweta")
@@ -182,7 +182,7 @@ public static class DatabaseInitializer
             db.Operators.Add(operatorEntity);
         }
         
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(cancellationToken);
         Console.WriteLine($"✅ Seeded {operatorsData.Length} operators to database");
         
         // ========================================

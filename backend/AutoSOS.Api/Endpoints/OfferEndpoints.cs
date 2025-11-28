@@ -94,7 +94,7 @@ public static class OfferEndpoints
             // Reject other offers for this request
             var otherOffers = await db.Offers
                 .Where(o => o.RequestId == offer.RequestId && o.Id != id && o.Status == OfferStatus.Proposed)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             foreach (var otherOffer in otherOffers)
             {

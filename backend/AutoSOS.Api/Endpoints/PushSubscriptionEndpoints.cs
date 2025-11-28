@@ -28,7 +28,7 @@ public static class PushSubscriptionEndpoints
             }
 
             // Check if operator exists
-            var operatorExists = await db.Operators.AnyAsync(o => o.Id == operatorId);
+            var operatorExists = await db.Operators.AnyAsync(o => o.Id == operatorId, cancellationToken);
             if (!operatorExists)
             {
                 return Results.NotFound(new { error = "Operator not found" });
@@ -36,7 +36,7 @@ public static class PushSubscriptionEndpoints
 
             // Check if subscription already exists
             var existingSubscription = await db.PushSubscriptions
-                .FirstOrDefaultAsync(ps => ps.OperatorId == operatorId && ps.Endpoint == dto.Endpoint);
+                .FirstOrDefaultAsync(ps => ps.OperatorId == operatorId && ps.Endpoint == dto.Endpoint, cancellationToken);
 
             if (existingSubscription != null)
             {
@@ -85,7 +85,7 @@ public static class PushSubscriptionEndpoints
             }
 
             var subscription = await db.PushSubscriptions
-                .FirstOrDefaultAsync(ps => ps.OperatorId == operatorGuid && ps.Endpoint == endpoint);
+                .FirstOrDefaultAsync(ps => ps.OperatorId == operatorGuid && ps.Endpoint == endpoint, cancellationToken);
 
             if (subscription == null)
             {
@@ -100,7 +100,7 @@ public static class PushSubscriptionEndpoints
         .RequireAuthorization();
 
         // Get operator's subscriptions (for debugging)
-        group.MapGet("/{operatorId}", async (string operatorId, AutoSOSDbContext db, HttpContext context) =>
+        group.MapGet("/{operatorId}", async (string operatorId, AutoSOSDbContext db, HttpContext context, CancellationToken cancellationToken) =>
         {
             if (!Guid.TryParse(operatorId, out var operatorGuid))
             {
@@ -123,7 +123,7 @@ public static class PushSubscriptionEndpoints
                     ps.CreatedAt,
                     ps.LastUsedAt
                 })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             return Results.Ok(subscriptions);
         })
