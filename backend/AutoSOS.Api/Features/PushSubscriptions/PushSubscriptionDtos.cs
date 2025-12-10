@@ -1,4 +1,4 @@
-namespace AutoSOS.Api.DTOs;
+namespace AutoSOS.Api.Features.PushSubscriptions;
 
 public record SavePushSubscriptionDto(
     string OperatorId,

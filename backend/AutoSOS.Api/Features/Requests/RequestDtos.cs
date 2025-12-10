@@ -1,4 +1,4 @@
-namespace AutoSOS.Api;
+namespace AutoSOS.Api.Features.Requests;
 
 public record CreateRequestDto(
     string PhoneNumber,
@@ -8,5 +8,9 @@ public record CreateRequestDto(
     double? ToLongitude,
     string? Description,
     Guid? RequiredEquipmentId // ID of equipment/service required for this request
+);
+
+public record CancelRequestDto(
+    string PhoneNumber
 );
 

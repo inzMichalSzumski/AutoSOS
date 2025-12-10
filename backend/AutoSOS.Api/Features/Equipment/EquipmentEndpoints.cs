@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using AutoSOS.Api.Data;
 
-namespace AutoSOS.Api.Endpoints;
+namespace AutoSOS.Api.Features.Equipment;
 
 public static class EquipmentEndpoints
 {

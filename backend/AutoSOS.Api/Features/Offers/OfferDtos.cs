@@ -1,4 +1,4 @@
-namespace AutoSOS.Api;
+namespace AutoSOS.Api.Features.Offers;
 
 public record CreateOfferDto(
     Guid RequestId,

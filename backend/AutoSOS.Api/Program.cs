@@ -6,7 +6,12 @@ using AutoSOS.Api.Data;
 using AutoSOS.Api.Hubs;
 using AutoSOS.Api.Models;
 using AutoSOS.Api.Services;
-using AutoSOS.Api.Endpoints;
+using AutoSOS.Api.Features.Auth;
+using AutoSOS.Api.Features.Requests;
+using AutoSOS.Api.Features.Operators;
+using AutoSOS.Api.Features.Offers;
+using AutoSOS.Api.Features.Equipment;
+using AutoSOS.Api.Features.PushSubscriptions;
 using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,15 +52,15 @@ builder.Services.AddSingleton<WebPushService>();
 // Background Services
 builder.Services.AddHostedService<RequestNotificationService>();
 
-// CORS - allow frontend from GitHub Pages
+// CORS - allow frontend from GitHub Pages and production
 builder.Services.AddCors(options =>
 {
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+        ?? new[] { "http://localhost:5173", "https://inzmichalszumski.github.io" };
+    
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "https://inzmichalszumski.github.io"
-            )
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -80,14 +85,13 @@ app.UseAuthorization();
 // SignalR Hub
 app.MapHub<RequestHub>("/hubs/request");
 
-// API Endpoints
+// API Endpoints - Vertical Slices Architecture
 app.MapAuthEndpoints();
 app.MapRequestEndpoints();
-app.MapOperatorEndpoints();
+app.MapOperatorEndpoints(); // Includes operator equipment endpoints
 app.MapOfferEndpoints();
 app.MapEquipmentEndpoints();
 app.MapPushSubscriptionEndpoints();
-app.MapOperatorEquipmentEndpoints();
 
 app.Run();
 

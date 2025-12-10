@@ -1,9 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using AutoSOS.Api.Data;
-using AutoSOS.Api.DTOs;
 using AutoSOS.Api.Models;
 
-namespace AutoSOS.Api.Endpoints;
+namespace AutoSOS.Api.Features.PushSubscriptions;
 
 public static class PushSubscriptionEndpoints
 {

@@ -2,9 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using AutoSOS.Api.Data;
 using AutoSOS.Api.Services;
-using AutoSOS.Api.DTOs;
 
-namespace AutoSOS.Api.Endpoints;
+namespace AutoSOS.Api.Features.Operators;
 
 public static class OperatorEndpoints
 {
@@ -185,10 +184,127 @@ public static class OperatorEndpoints
         .RequireAuthorization()
         .WithName("UpdateOperatorAvailability")
         .WithOpenApi();
+
+        // GET /api/operators/{operatorId}/equipment - Get operator's equipment
+        group.MapGet("/{operatorId}/equipment", async (
+            string operatorId,
+            AutoSOSDbContext db,
+            HttpContext context,
+            CancellationToken cancellationToken) =>
+        {
+            if (!Guid.TryParse(operatorId, out var operatorGuid))
+            {
+                return Results.BadRequest(new { error = "Invalid operator ID" });
+            }
+
+            // Verify operator is requesting their own equipment
+            var tokenOperatorId = context.User.FindFirst("OperatorId")?.Value;
+            if (tokenOperatorId != operatorId)
+            {
+                return Results.Forbid();
+            }
+
+            var operatorEquipment = await db.OperatorEquipment
+                .Include(oe => oe.Equipment)
+                .Where(oe => oe.OperatorId == operatorGuid)
+                .Select(oe => new
+                {
+                    oe.Equipment.Id,
+                    oe.Equipment.Name,
+                    oe.Equipment.Description,
+                    oe.Equipment.RequiresTransport
+                })
+                .ToListAsync(cancellationToken);
+
+            return Results.Ok(new { equipment = operatorEquipment });
+        })
+        .RequireAuthorization()
+        .WithName("GetOperatorEquipment")
+        .WithOpenApi();
+
+        // PUT /api/operators/{operatorId}/equipment - Update operator's equipment
+        group.MapPut("/{operatorId}/equipment", async (
+            string operatorId,
+            UpdateOperatorEquipmentDto dto,
+            AutoSOSDbContext db,
+            HttpContext context,
+            CancellationToken cancellationToken) =>
+        {
+            if (!Guid.TryParse(operatorId, out var operatorGuid))
+            {
+                return Results.BadRequest(new { error = "Invalid operator ID" });
+            }
+
+            // Verify operator is updating their own equipment
+            var tokenOperatorId = context.User.FindFirst("OperatorId")?.Value;
+            if (tokenOperatorId != operatorId)
+            {
+                return Results.Forbid();
+            }
+
+            // Verify operator exists
+            var operatorExists = await db.Operators.AnyAsync(o => o.Id == operatorGuid, cancellationToken);
+            if (!operatorExists)
+            {
+                return Results.NotFound(new { error = "Operator not found" });
+            }
+
+            // Validate EquipmentIds is not null
+            if (dto.EquipmentIds == null)
+            {
+                return Results.BadRequest(new { error = "EquipmentIds cannot be null. Use an empty array to remove all equipment." });
+            }
+
+            // Deduplicate equipment IDs to prevent database constraint violations
+            var uniqueEquipmentIds = dto.EquipmentIds.Distinct().ToList();
+            if (uniqueEquipmentIds.Count != dto.EquipmentIds.Count)
+            {
+                return Results.BadRequest(new { error = "Duplicate equipment IDs are not allowed." });
+            }
+
+            // Verify all equipment exists in a single query BEFORE making any changes to DbContext
+            var existingEquipmentIds = await db.Equipment
+                .Where(e => uniqueEquipmentIds.Contains(e.Id))
+                .Select(e => e.Id)
+                .ToListAsync(cancellationToken);
+
+            // Check if any equipment IDs are invalid
+            var invalidEquipmentIds = uniqueEquipmentIds.Except(existingEquipmentIds).ToList();
+            if (invalidEquipmentIds.Any())
+            {
+                return Results.BadRequest(new { error = $"Equipment with IDs not found: {string.Join(", ", invalidEquipmentIds)}" });
+            }
+
+            // All validations passed - now safe to modify DbContext
+            // Remove all current equipment
+            var currentEquipment = await db.OperatorEquipment
+                .Where(oe => oe.OperatorId == operatorGuid)
+                .ToListAsync(cancellationToken);
+
+            db.OperatorEquipment.RemoveRange(currentEquipment);
+
+            // Add new equipment
+            foreach (var equipmentId in uniqueEquipmentIds)
+            {
+                db.OperatorEquipment.Add(new Models.OperatorEquipment
+                {
+                    OperatorId = operatorGuid,
+                    EquipmentId = equipmentId
+                });
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+
+            return Results.Ok(new
+            {
+                success = true,
+                message = "Equipment updated successfully",
+                equipmentCount = uniqueEquipmentIds.Count
+            });
+        })
+        .RequireAuthorization()
+        .WithName("UpdateOperatorEquipment")
+        .WithOpenApi();
     }
 }
-
-// DTOs for operator endpoints
-public record UpdateLocationDto(double Latitude, double Longitude);
-public record UpdateAvailabilityDto(bool IsAvailable);
 

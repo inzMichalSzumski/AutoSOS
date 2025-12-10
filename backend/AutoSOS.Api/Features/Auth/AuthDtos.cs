@@ -1,4 +1,4 @@
-namespace AutoSOS.Api.DTOs;
+namespace AutoSOS.Api.Features.Auth;
 
 public record RegisterOperatorDto(
     string Email,
@@ -7,7 +7,7 @@ public record RegisterOperatorDto(
     string Phone,
     string VehicleType,
     int? ServiceRadiusKm,
-    List<Guid> EquipmentIds // List of equipment IDs that the operator possesses
+    List<Guid>? EquipmentIds // List of equipment IDs that the operator possesses
 );
 
 public record LoginDto(
@@ -21,6 +21,4 @@ public record AuthResponseDto(
     string Name,
     string Email
 );
-
-public record UpdateOperatorEquipmentDto(List<Guid> EquipmentIds);
 

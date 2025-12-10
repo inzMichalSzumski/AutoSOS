@@ -5,7 +5,7 @@ using AutoSOS.Api.Hubs;
 using AutoSOS.Api.Models;
 using AutoSOS.Api.Services;
 
-namespace AutoSOS.Api.Endpoints;
+namespace AutoSOS.Api.Features.Requests;
 
 public static class RequestEndpoints
 {

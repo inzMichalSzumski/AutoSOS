@@ -4,10 +4,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AutoSOS.Api.Data;
-using AutoSOS.Api.DTOs;
 using AutoSOS.Api.Models;
 
-namespace AutoSOS.Api.Endpoints;
+namespace AutoSOS.Api.Features.Auth;
 
 public static class AuthEndpoints
 {
