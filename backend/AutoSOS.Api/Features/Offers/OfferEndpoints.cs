@@ -4,7 +4,7 @@ using AutoSOS.Api.Data;
 using AutoSOS.Api.Hubs;
 using AutoSOS.Api.Models;
 
-namespace AutoSOS.Api.Endpoints;
+namespace AutoSOS.Api.Features.Offers;
 
 public static class OfferEndpoints
 {
@@ -67,7 +67,7 @@ public static class OfferEndpoints
         .WithName("CreateOffer")
         .WithOpenApi();
 
-        // POST /api/offers/{id}/accept - Akceptacja oferty
+        // POST /api/offers/{id}/accept - Accept offer
         group.MapPost("/{id:guid}/accept", async (
             Guid id,
             AutoSOSDbContext db,
