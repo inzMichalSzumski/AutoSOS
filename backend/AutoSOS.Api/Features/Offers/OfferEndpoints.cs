@@ -132,7 +132,17 @@ public static class OfferEndpoints
                 otherOffer.Status = OfferStatus.Rejected;
             }
 
-            await db.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Another user has already modified this offer (likely accepted it)
+                return Results.Conflict(new { 
+                    error = "This offer has already been accepted by someone else. Please refresh and try again." 
+                });
+            }
 
             // Notify via SignalR
             await hub.Clients.Group($"request-{offer.Request.Id}").SendAsync("OfferAccepted", new

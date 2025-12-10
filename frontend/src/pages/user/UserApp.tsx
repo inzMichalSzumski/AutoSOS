@@ -150,13 +150,13 @@ export default function UserApp() {
   }
 
   const handleAcceptOffer = async () => {
-    if (!selectedOperator || !selectedOperator.offerId) {
+    if (!selectedOperator || !selectedOperator.offerId || !currentRequest) {
       alert('No offer to accept')
       return
     }
 
     try {
-      await apiClient.acceptOffer(selectedOperator.offerId)
+      await apiClient.acceptOffer(selectedOperator.offerId, currentRequest.phoneNumber)
       setRequestStatus('accepted')
     } catch (error) {
       console.error('Error accepting offer:', error)

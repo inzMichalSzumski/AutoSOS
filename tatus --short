@@ -1,0 +1,30 @@
+[1mdiff --git a/frontend/src/services/api.ts b/frontend/src/services/api.ts[m
+[1mindex 575e69b..3233aca 100644[m
+[1m--- a/frontend/src/services/api.ts[m
+[1m+++ b/frontend/src/services/api.ts[m
+[36m@@ -104,8 +104,11 @@[m [mclass ApiClient {[m
+     });[m
+   }[m
+ [m
+[31m-  async getRequest(id: string): Promise<any> {[m
+[31m-    return this.request(`/api/requests/${id}`);[m
+[32m+[m[32m  async getRequest(id: string, phoneNumber: string): Promise<any> {[m
+[32m+[m[32m    const params = new URLSearchParams({[m
+[32m+[m[32m      phoneNumber: phoneNumber,[m
+[32m+[m[32m    });[m
+[32m+[m[32m    return this.request(`/api/requests/${id}?${params}`);[m
+   }[m
+ [m
+   async cancelRequest(id: string, phoneNumber: string): Promise<{ id: string; status: string; message: string }> {[m
+[36m@@ -140,9 +143,10 @@[m [mclass ApiClient {[m
+     });[m
+   }[m
+ [m
+[31m-  async acceptOffer(offerId: string): Promise<OfferResponse> {[m
+[32m+[m[32m  async acceptOffer(offerId: string, phoneNumber: string): Promise<OfferResponse> {[m
+     return this.request<OfferResponse>(`/api/offers/${offerId}/accept`, {[m
+       method: 'POST',[m
+[32m+[m[32m      body: JSON.stringify({ phoneNumber }),[m
+     });[m
+   }[m
+ [m

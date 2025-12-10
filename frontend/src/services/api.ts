@@ -104,8 +104,11 @@ class ApiClient {
     });
   }
 
-  async getRequest(id: string): Promise<any> {
-    return this.request(`/api/requests/${id}`);
+  async getRequest(id: string, phoneNumber: string): Promise<any> {
+    const params = new URLSearchParams({
+      phoneNumber: phoneNumber,
+    });
+    return this.request(`/api/requests/${id}?${params}`);
   }
 
   async cancelRequest(id: string, phoneNumber: string): Promise<{ id: string; status: string; message: string }> {
@@ -140,9 +143,10 @@ class ApiClient {
     });
   }
 
-  async acceptOffer(offerId: string): Promise<OfferResponse> {
+  async acceptOffer(offerId: string, phoneNumber: string): Promise<OfferResponse> {
     return this.request<OfferResponse>(`/api/offers/${offerId}/accept`, {
       method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
     });
   }
 
