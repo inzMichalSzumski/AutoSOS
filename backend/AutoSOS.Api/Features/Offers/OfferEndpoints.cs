@@ -18,9 +18,32 @@ public static class OfferEndpoints
         group.MapPost("/", async (
             CreateOfferDto dto,
             AutoSOSDbContext db,
+            HttpContext context,
             IHubContext<RequestHub> hub,
             CancellationToken cancellationToken) =>
         {
+            // Security: Verify operator is creating their own offer
+            var tokenOperatorId = context.User.FindFirst("OperatorId")?.Value;
+            if (string.IsNullOrEmpty(tokenOperatorId) || 
+                !Guid.TryParse(tokenOperatorId, out var operatorGuid) ||
+                operatorGuid != dto.OperatorId)
+            {
+                return Results.Forbid();
+            }
+
+            // Validate price
+            if (dto.Price < 0 || dto.Price > 100000)
+            {
+                return Results.BadRequest(new { error = "Invalid price. Must be between 0 and 100000." });
+            }
+
+            // Validate estimated time
+            if (dto.EstimatedTimeMinutes.HasValue && 
+                (dto.EstimatedTimeMinutes < 0 || dto.EstimatedTimeMinutes > 1440))
+            {
+                return Results.BadRequest(new { error = "Invalid estimated time. Must be between 0 and 1440 minutes (24 hours)." });
+            }
+
             var request = await db.Requests.FindAsync(new object[] { dto.RequestId }, cancellationToken);
             if (request == null)
                 return Results.NotFound(new { error = "Request not found" });
@@ -64,12 +87,14 @@ public static class OfferEndpoints
                 offer.CreatedAt
             });
         })
+        .RequireAuthorization()
         .WithName("CreateOffer")
         .WithOpenApi();
 
         // POST /api/offers/{id}/accept - Accept offer
         group.MapPost("/{id:guid}/accept", async (
             Guid id,
+            AcceptOfferDto dto,
             AutoSOSDbContext db,
             IHubContext<RequestHub> hub,
             CancellationToken cancellationToken) =>
@@ -81,6 +106,12 @@ public static class OfferEndpoints
 
             if (offer == null)
                 return Results.NotFound(new { error = "Offer not found" });
+
+            // Security: Verify phone number matches request owner
+            if (offer.Request.PhoneNumber != dto.PhoneNumber)
+            {
+                return Results.Forbid();
+            }
 
             if (offer.Status != OfferStatus.Proposed)
                 return Results.BadRequest(new { error = "Offer cannot be accepted" });

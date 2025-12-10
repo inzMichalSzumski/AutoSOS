@@ -81,12 +81,22 @@ public static class RequestEndpoints
         .WithOpenApi();
 
         // GET /api/requests/{id} - Get a specific request
-        group.MapGet("/{id:guid}", async (Guid id, AutoSOSDbContext db, CancellationToken cancellationToken) =>
+        group.MapGet("/{id:guid}", async (
+            Guid id,
+            string phoneNumber,
+            AutoSOSDbContext db,
+            CancellationToken cancellationToken) =>
         {
             var request = await db.Requests.FindAsync(new object[] { id }, cancellationToken);
 
             if (request == null)
                 return Results.NotFound();
+
+            // Security: Verify phone number matches request owner
+            if (request.PhoneNumber != phoneNumber)
+            {
+                return Results.Forbid();
+            }
 
             return Results.Ok(new
             {
