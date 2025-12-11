@@ -117,6 +117,7 @@ export default function UserApp() {
 
   const handleRequestSubmit = async (request: HelpRequest) => {
     try {
+      console.log('Submitting request:', request)
       // 1. Create request in backend
       const response = await apiClient.createRequest({
         phoneNumber: request.phoneNumber,
@@ -126,6 +127,7 @@ export default function UserApp() {
         toLongitude: request.toLocation?.lng,
         description: request.description,
       })
+      console.log('Request created:', response)
 
       // 2. Update request with ID from backend
       const updatedRequest: HelpRequest = {
