@@ -8,8 +8,14 @@ class SignalRService {
 
   async connectToRequestHub(requestId: string): Promise<signalR.HubConnection> {
     if (this.connection && this.connection.state === signalR.HubConnectionState.Connected) {
-      await this.connection.invoke('JoinRequestGroup', requestId)
-      return this.connection
+      try {
+        await this.connection.invoke('JoinRequestGroup', requestId)
+        return this.connection
+      } catch (error) {
+        console.error('Error joining request group with existing connection:', error)
+        // Connection might be stale, create new one
+        this.connection = null
+      }
     }
 
     this.connection = new signalR.HubConnectionBuilder()
@@ -17,8 +23,16 @@ class SignalRService {
       .withAutomaticReconnect()
       .build()
 
-    await this.connection.start()
-    await this.connection.invoke('JoinRequestGroup', requestId)
+    try {
+      console.log('Starting SignalR connection...')
+      await this.connection.start()
+      console.log('SignalR connected, joining request group:', requestId)
+      await this.connection.invoke('JoinRequestGroup', requestId)
+      console.log('Successfully joined request group')
+    } catch (error) {
+      console.error('Error connecting to SignalR:', error)
+      throw error
+    }
     
     return this.connection
   }
