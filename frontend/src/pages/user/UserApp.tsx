@@ -143,10 +143,9 @@ export default function UserApp() {
 
       // Listen for offers
       connection.on('OfferReceived', (data: { id: string; price: number; estimatedTimeMinutes?: number; OperatorName: string }) => {
+        console.log('Received offer via SignalR:', data)
         // Refresh offers list to show new offer
-        if (currentRequest?.id) {
-          loadOffers(currentRequest.id)
-        }
+        loadOffers(response.id)
       })
 
       // Listen for timeout
@@ -155,12 +154,8 @@ export default function UserApp() {
         alert(data.message || 'Nie udało się znaleźć dostępnej pomocy. Spróbuj ponownie później.')
       })
 
-      // 4. Poll for offers (backend creates them asynchronously)
-      // Start polling after a short delay
-      setTimeout(() => loadOffers(response.id), 500)
-      setTimeout(() => loadOffers(response.id), 2000)
-      setTimeout(() => loadOffers(response.id), 5000)
-      setTimeout(() => loadOffers(response.id), 10000)
+      // Note: Offers will be received via SignalR when operators create them
+      // No need to poll - SignalR 'OfferReceived' event will trigger loadOffers()
     } catch (error) {
       console.error('Error creating request:', error)
       alert('Nie udało się utworzyć zgłoszenia. Spróbuj ponownie.')
