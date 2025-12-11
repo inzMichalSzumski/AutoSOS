@@ -163,7 +163,7 @@ export default function OperatorList({
               </div>
             </div>
 
-            {selectedOperator?.id === operator.id && status === 'offer_received' && (
+            {selectedOperator?.id === operator.id && operator.offerId && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <button
                   onClick={(e) => {
