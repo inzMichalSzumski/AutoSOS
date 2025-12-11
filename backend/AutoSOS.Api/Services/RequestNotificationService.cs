@@ -72,22 +72,16 @@ public class RequestNotificationService : BackgroundService
             // Check if request already has an offer
             var hasOffer = await db.Offers.AnyAsync(o => o.RequestId == request.Id && o.Status == OfferStatus.Proposed, cancellationToken);
             
-            // ========================================
-            // TODO: TEMPORARY - Mock offers - to be removed when real operators are available
-            // ========================================
-            // Mock: Create automatic offer after specified time (simulates operator response)
-            if (!hasOffer && secondsSinceCreation >= MockOfferDelaySeconds)
-            {
-                var random = new Random();
-                if (random.NextDouble() < MockOfferProbability)
-                {
-                    await CreateMockOfferAsync(db, hub, request, cancellationToken);
-                    continue; // We have an offer, don't expand notifications
-                }
-            }
-            // ========================================
-            // END OF TEMPORARY CODE - Mock offers
-            // ========================================
+            // DISABLED: Mock offers - operators should create offers manually
+            // if (!hasOffer && secondsSinceCreation >= MockOfferDelaySeconds)
+            // {
+            //     var random = new Random();
+            //     if (random.NextDouble() < MockOfferProbability)
+            //     {
+            //         await CreateMockOfferAsync(db, hub, request, cancellationToken);
+            //         continue;
+            //     }
+            // }
             
             if (hasOffer)
             {
