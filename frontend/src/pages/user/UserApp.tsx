@@ -37,7 +37,9 @@ export default function UserApp() {
 
   const loadOffers = async (requestId: string) => {
     try {
+      console.log('Loading offers for request:', requestId)
       const offersResponse = await apiClient.getOffersForRequest(requestId)
+      console.log('Received offers:', offersResponse)
       
       // Update operators list with offer information
       const operatorsWithOffers: Operator[] = offersResponse.offers.map((offer) => ({
@@ -51,6 +53,7 @@ export default function UserApp() {
         offerId: offer.id,
       }))
 
+      console.log('Operators with offers:', operatorsWithOffers)
       setAvailableOperators(operatorsWithOffers)
       
       if (operatorsWithOffers.length > 0) {
@@ -139,10 +142,12 @@ export default function UserApp() {
         alert(data.message || 'Nie udało się znaleźć dostępnej pomocy. Spróbuj ponownie później.')
       })
 
-      // 4. Wait a moment for backend to create offers, then fetch them
-      setTimeout(() => {
-        loadOffers(response.id)
-      }, 2000)
+      // 4. Poll for offers (backend creates them asynchronously)
+      // Start polling after a short delay
+      setTimeout(() => loadOffers(response.id), 500)
+      setTimeout(() => loadOffers(response.id), 2000)
+      setTimeout(() => loadOffers(response.id), 5000)
+      setTimeout(() => loadOffers(response.id), 10000)
     } catch (error) {
       console.error('Error creating request:', error)
       alert('Nie udało się utworzyć zgłoszenia. Spróbuj ponownie.')
@@ -153,6 +158,7 @@ export default function UserApp() {
     // User selects an operator to view their offer details
     // Offers are now created by the backend automatically (RequestNotificationService)
     // or by operators through their panel
+    console.log('Selected operator:', operator)
     setSelectedOperator(operator)
   }
 
