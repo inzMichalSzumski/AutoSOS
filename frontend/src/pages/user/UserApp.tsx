@@ -56,6 +56,17 @@ export default function UserApp() {
       console.log('Operators with offers:', operatorsWithOffers)
       setAvailableOperators(operatorsWithOffers)
       
+      // Update selectedOperator if it exists (to get the latest offerId)
+      setSelectedOperator(prev => {
+        if (!prev) return null
+        const updated = operatorsWithOffers.find(op => op.id === prev.id)
+        if (updated) {
+          console.log('Updated selected operator with offer:', updated)
+          return updated
+        }
+        return prev
+      })
+      
       if (operatorsWithOffers.length > 0) {
         setRequestStatus('offer_received')
       }
