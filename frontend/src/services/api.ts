@@ -136,6 +136,22 @@ class ApiClient {
     return this.request<OperatorsResponse>(`/api/operators?${params}`);
   }
 
+  async getOffersForRequest(requestId: string): Promise<{ offers: Array<{
+    id: string;
+    price: number;
+    estimatedTimeMinutes?: number;
+    status: string;
+    createdAt: string;
+    operator: {
+      id: string;
+      name: string;
+      phone: string;
+      vehicleType: string;
+    };
+  }> }> {
+    return this.request(`/api/offers/request/${requestId}`);
+  }
+
   async createOffer(dto: CreateOfferDto): Promise<OfferResponse> {
     return this.request<OfferResponse>('/api/offers', {
       method: 'POST',

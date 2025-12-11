@@ -14,6 +14,38 @@ public static class OfferEndpoints
             .WithTags("Offers")
             .WithOpenApi();
 
+        // GET /api/offers/request/{requestId} - Get all offers for a request (public)
+        group.MapGet("/request/{requestId:guid}", async (
+            Guid requestId,
+            AutoSOSDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            var offers = await db.Offers
+                .Include(o => o.Operator)
+                .Where(o => o.RequestId == requestId && o.Status == OfferStatus.Proposed)
+                .OrderBy(o => o.Price)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.Price,
+                    o.EstimatedTimeMinutes,
+                    o.Status,
+                    o.CreatedAt,
+                    Operator = new
+                    {
+                        o.Operator.Id,
+                        o.Operator.Name,
+                        o.Operator.Phone,
+                        o.Operator.VehicleType
+                    }
+                })
+                .ToListAsync(cancellationToken);
+
+            return Results.Ok(new { offers });
+        })
+        .WithName("GetOffersForRequest")
+        .WithOpenApi();
+
         // POST /api/offers - Operator submits an offer
         group.MapPost("/", async (
             CreateOfferDto dto,
@@ -97,6 +129,7 @@ public static class OfferEndpoints
             AcceptOfferDto dto,
             AutoSOSDbContext db,
             IHubContext<RequestHub> hub,
+            ILogger<Program> logger,
             CancellationToken cancellationToken) =>
         {
             var offer = await db.Offers
@@ -105,11 +138,17 @@ public static class OfferEndpoints
                 .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
             if (offer == null)
+            {
+                logger.LogWarning("Offer not found: {OfferId}", id);
                 return Results.NotFound(new { error = "Offer not found" });
+            }
 
             // Security: Verify phone number matches request owner
             if (offer.Request.PhoneNumber != dto.PhoneNumber)
             {
+                logger.LogWarning(
+                    "Phone number mismatch for offer {OfferId}. Expected: {ExpectedPhone}, Received: {ReceivedPhone}",
+                    id, offer.Request.PhoneNumber, dto.PhoneNumber);
                 return Results.Forbid();
             }
 
