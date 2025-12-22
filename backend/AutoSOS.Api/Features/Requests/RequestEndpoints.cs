@@ -248,7 +248,7 @@ public static class RequestEndpoints
                     r.Description,
                     RequiredEquipmentId = r.RequiredEquipmentId,
                     RequiredEquipmentName = r.RequiredEquipment != null ? r.RequiredEquipment.Name : null,
-                    r.Status,
+                    Status = r.Status.ToString(), // Convert enum to string
                     r.CreatedAt,
                     Distance = Math.Round(r.Distance, 1)
                 })
