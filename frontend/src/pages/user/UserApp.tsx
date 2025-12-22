@@ -90,9 +90,8 @@ export default function UserApp() {
 
           // Listen for offers
           connection.on('OfferReceived', (data: { id: string; price: number; estimatedTimeMinutes?: number; OperatorName: string }) => {
-            // Refresh operator list to show new offer
-            loadOperators(state.request!.fromLocation.lat, state.request!.fromLocation.lng)
-            setRequestStatus('offer_received')
+            // Refresh offers list to show new offer
+            loadOffers(state.request!.id)
           })
 
           // Listen for timeout
@@ -107,8 +106,8 @@ export default function UserApp() {
       
       setupSignalR()
       
-      // Load operators for the already created request
-      loadOperators(state.request.fromLocation.lat, state.request.fromLocation.lng)
+      // Load offers for the already created request
+      loadOffers(state.request.id)
       
       // Clear state after use
       window.history.replaceState({}, document.title)

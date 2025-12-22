@@ -37,6 +37,8 @@ export default function OperatorApp() {
   const [submittingOffer, setSubmittingOffer] = useState(false)
   const [operatorLocation, setOperatorLocation] = useState<OperatorLocation | null>(null)
   const [showLocationSetup, setShowLocationSetup] = useState(false)
+  const [isAvailable, setIsAvailable] = useState(false)
+  const [togglingAvailability, setTogglingAvailability] = useState(false)
 
   // Check operator location on mount
   useEffect(() => {
@@ -105,6 +107,9 @@ export default function OperatorApp() {
     try {
       const operator = await apiClient.getOperatorDetails(operatorId)
       
+      // Set availability status
+      setIsAvailable(operator.isAvailable)
+      
       if (operator.currentLatitude && operator.currentLongitude) {
         setOperatorLocation({
           lat: operator.currentLatitude,
@@ -144,6 +149,27 @@ export default function OperatorApp() {
     } catch (error) {
       console.error('Error updating location:', error)
       alert('Failed to update location. Please try again.')
+    }
+  }
+
+  const handleToggleAvailability = async () => {
+    if (!operatorId || togglingAvailability) return
+
+    try {
+      setTogglingAvailability(true)
+      const newAvailability = !isAvailable
+      const result = await apiClient.updateOperatorAvailability(operatorId, newAvailability)
+      setIsAvailable(result.isAvailable)
+      
+      // Reload requests if becoming available
+      if (result.isAvailable) {
+        loadRequests()
+      }
+    } catch (error) {
+      console.error('Error toggling availability:', error)
+      alert('Nie udało się zmienić dostępności. Spróbuj ponownie.')
+    } finally {
+      setTogglingAvailability(false)
     }
   }
 
@@ -227,6 +253,25 @@ export default function OperatorApp() {
                   </button>
                 </div>
               )}
+              <div className="mt-3 flex items-center gap-3">
+                <button
+                  onClick={handleToggleAvailability}
+                  disabled={togglingAvailability}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                    isAvailable
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
+                  } disabled:opacity-50`}
+                >
+                  <div className={`w-3 h-3 rounded-full ${isAvailable ? 'bg-white' : 'bg-gray-600'}`}></div>
+                  {togglingAvailability ? 'Zmiana...' : isAvailable ? '✓ Dostępny' : '✗ Niedostępny'}
+                </button>
+                <span className="text-sm text-gray-500">
+                  {isAvailable 
+                    ? 'Będziesz otrzymywać zgłoszenia' 
+                    : 'Nie otrzymujesz zgłoszeń - kliknij aby się udostępnić'}
+                </span>
+              </div>
             </div>
             <div className="flex gap-3">
               <button
