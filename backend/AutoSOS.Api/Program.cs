@@ -52,6 +52,7 @@ builder.Services.AddSingleton<WebPushService>();
 
 // Background Services
 builder.Services.AddHostedService<RequestNotificationService>();
+builder.Services.AddHostedService<RequestCleanupService>();
 
 // CORS - allow frontend from GitHub Pages and production
 builder.Services.AddCors(options =>

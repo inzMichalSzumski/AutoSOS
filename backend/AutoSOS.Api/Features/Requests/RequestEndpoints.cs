@@ -196,9 +196,15 @@ public static class RequestEndpoints
                 .Select(oe => oe.EquipmentId)
                 .ToList();
 
-            // Get pending, searching, and offer_received requests (operator should still see requests they made offers for)
+            // Get all active requests that operator might be interested in
+            // This includes: new requests, requests with offers, accepted requests, and requests where operator is on the way
             var availableRequests = await db.Requests
-                .Where(r => r.Status == RequestStatus.Pending || r.Status == RequestStatus.Searching || r.Status == RequestStatus.OfferReceived)
+                .Include(r => r.RequiredEquipment)
+                .Where(r => r.Status == RequestStatus.Pending 
+                         || r.Status == RequestStatus.Searching 
+                         || r.Status == RequestStatus.OfferReceived
+                         || r.Status == RequestStatus.Accepted
+                         || r.Status == RequestStatus.OnTheWay)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync(cancellationToken);
 

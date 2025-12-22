@@ -333,8 +333,18 @@ export default function OperatorApp() {
                         <h3 className="text-lg font-bold text-gray-900">
                           Zgłoszenie #{request.id.slice(0, 8)}
                         </h3>
-                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded">
-                          {request.status === 'Pending' ? 'Oczekujące' : 'Szukanie'}
+                        <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                          request.status === 'Accepted' ? 'bg-green-100 text-green-800' :
+                          request.status === 'OnTheWay' ? 'bg-blue-100 text-blue-800' :
+                          request.status === 'OfferReceived' ? 'bg-purple-100 text-purple-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {request.status === 'Pending' ? 'Oczekujące' :
+                           request.status === 'Searching' ? 'Szukanie' :
+                           request.status === 'OfferReceived' ? 'Oferta złożona' :
+                           request.status === 'Accepted' ? '✓ Zaakceptowane' :
+                           request.status === 'OnTheWay' ? '🚗 W drodze' :
+                           request.status}
                         </span>
                       </div>
                       <div className="text-sm text-gray-600 space-y-1">
@@ -348,12 +358,32 @@ export default function OperatorApp() {
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setSelectedRequest(request)}
-                      className="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                    >
-                      Wyślij ofertę
-                    </button>
+                    {(request.status === 'Pending' || request.status === 'Searching') && (
+                      <button
+                        onClick={() => setSelectedRequest(request)}
+                        className="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
+                        Wyślij ofertę
+                      </button>
+                    )}
+                    {request.status === 'OfferReceived' && (
+                      <div className="text-sm text-gray-600 text-right">
+                        <div className="font-semibold text-purple-600">Oferta wysłana</div>
+                        <div className="text-xs">Oczekiwanie na decyzję</div>
+                      </div>
+                    )}
+                    {request.status === 'Accepted' && (
+                      <div className="text-sm text-gray-600 text-right">
+                        <div className="font-semibold text-green-600">Oferta zaakceptowana!</div>
+                        <div className="text-xs">Skontaktuj się z klientem</div>
+                      </div>
+                    )}
+                    {request.status === 'OnTheWay' && (
+                      <div className="text-sm text-gray-600 text-right">
+                        <div className="font-semibold text-blue-600">W drodze</div>
+                        <div className="text-xs">Pomoc w trakcie realizacji</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
