@@ -35,6 +35,46 @@ export default function UserApp() {
     }
   }
 
+  const loadOffers = async (requestId: string, phoneNumber: string) => {
+    try {
+      console.log('Loading offers for request:', requestId)
+      const offersResponse = await apiClient.getOffersForRequest(requestId, phoneNumber)
+      console.log('Received offers:', offersResponse)
+      
+      // Update operators list with offer information
+      const operatorsWithOffers: Operator[] = offersResponse.offers.map((offer) => ({
+        id: offer.operator.id,
+        name: offer.operator.name,
+        phone: offer.operator.phone,
+        distance: 0, // Distance not available in offer response
+        vehicleType: offer.operator.vehicleType,
+        estimatedPrice: offer.price,
+        estimatedTime: offer.estimatedTimeMinutes,
+        offerId: offer.id,
+      }))
+
+      console.log('Operators with offers:', operatorsWithOffers)
+      setAvailableOperators(operatorsWithOffers)
+      
+      // Update selectedOperator if it exists (to get the latest offerId)
+      setSelectedOperator(prev => {
+        if (!prev) return null
+        const updated = operatorsWithOffers.find(op => op.id === prev.id)
+        if (updated) {
+          console.log('Updated selected operator with offer:', updated)
+          return updated
+        }
+        return prev
+      })
+      
+      if (operatorsWithOffers.length > 0) {
+        setRequestStatus('offer_received')
+      }
+    } catch (error) {
+      console.error('Error loading offers:', error)
+    }
+  }
+
   // Check if we came from RequestHelp with an already created request
   useEffect(() => {
     const state = location.state as { request?: HelpRequest } | null
@@ -50,9 +90,8 @@ export default function UserApp() {
 
           // Listen for offers
           connection.on('OfferReceived', (data: { id: string; price: number; estimatedTimeMinutes?: number; OperatorName: string }) => {
-            // Refresh operator list to show new offer
-            loadOperators(state.request!.fromLocation.lat, state.request!.fromLocation.lng)
-            setRequestStatus('offer_received')
+            // Refresh offers list to show new offer
+            loadOffers(state.request!.id, state.request!.phoneNumber)
           })
 
           // Listen for timeout
@@ -67,8 +106,8 @@ export default function UserApp() {
       
       setupSignalR()
       
-      // Load operators for the already created request
-      loadOperators(state.request.fromLocation.lat, state.request.fromLocation.lng)
+      // Load offers for the already created request
+      loadOffers(state.request.id, state.request.phoneNumber)
       
       // Clear state after use
       window.history.replaceState({}, document.title)
@@ -77,6 +116,7 @@ export default function UserApp() {
 
   const handleRequestSubmit = async (request: HelpRequest) => {
     try {
+      console.log('Submitting request:', request)
       // 1. Create request in backend
       const response = await apiClient.createRequest({
         phoneNumber: request.phoneNumber,
@@ -86,6 +126,7 @@ export default function UserApp() {
         toLongitude: request.toLocation?.lng,
         description: request.description,
       })
+      console.log('Request created:', response)
 
       // 2. Update request with ID from backend
       const updatedRequest: HelpRequest = {
@@ -101,9 +142,9 @@ export default function UserApp() {
 
       // Listen for offers
       connection.on('OfferReceived', (data: { id: string; price: number; estimatedTimeMinutes?: number; OperatorName: string }) => {
-        // Refresh operator list to show new offer
-        loadOperators(request.fromLocation.lat, request.fromLocation.lng)
-        setRequestStatus('offer_received')
+        console.log('Received offer via SignalR:', data)
+        // Refresh offers list to show new offer
+        loadOffers(response.id, request.phoneNumber)
       })
 
       // Listen for timeout
@@ -112,55 +153,47 @@ export default function UserApp() {
         alert(data.message || 'Nie udało się znaleźć dostępnej pomocy. Spróbuj ponownie później.')
       })
 
-      // 4. Fetch available operators
-      await loadOperators(request.fromLocation.lat, request.fromLocation.lng)
+      // Note: Offers will be received via SignalR when operators create them
+      // No need to poll - SignalR 'OfferReceived' event will trigger loadOffers()
     } catch (error) {
       console.error('Error creating request:', error)
       alert('Nie udało się utworzyć zgłoszenia. Spróbuj ponownie.')
     }
   }
 
-  const handleOperatorSelect = async (operator: Operator) => {
-    if (!currentRequest) return
-
-    try {
-      // Operator submits offer (simulation - in real app operator does this through their API)
-      // For now we use sample price and time
-      const estimatedPrice = 150 + Math.floor(Math.random() * 100)
-      const estimatedTime = 15 + Math.floor(Math.random() * 20)
-
-      const offerResponse = await apiClient.createOffer({
-        requestId: currentRequest.id,
-        operatorId: operator.id,
-        price: estimatedPrice,
-        estimatedTimeMinutes: estimatedTime,
-      })
-
-      setSelectedOperator({
-        ...operator,
-        estimatedPrice,
-        estimatedTime,
-        offerId: offerResponse.id,
-      })
-      setRequestStatus('offer_received')
-    } catch (error) {
-      console.error('Error submitting offer:', error)
-      alert('Failed to submit offer. Please try again.')
-    }
+  const handleOperatorSelect = (operator: Operator) => {
+    // User selects an operator to view their offer details
+    // Offers are now created by the backend automatically (RequestNotificationService)
+    // or by operators through their panel
+    console.log('Selected operator:', operator)
+    setSelectedOperator(operator)
   }
 
   const handleAcceptOffer = async () => {
-    if (!selectedOperator || !selectedOperator.offerId) {
+    if (!selectedOperator || !selectedOperator.offerId || !currentRequest) {
       alert('No offer to accept')
       return
     }
 
+    if (!currentRequest.phoneNumber) {
+      console.error('Missing phone number in current request:', currentRequest)
+      alert('Error: Phone number is missing. Please create a new request.')
+      return
+    }
+
     try {
-      await apiClient.acceptOffer(selectedOperator.offerId)
+      console.log('Accepting offer:', {
+        offerId: selectedOperator.offerId,
+        phoneNumber: currentRequest.phoneNumber,
+        requestId: currentRequest.id
+      })
+      await apiClient.acceptOffer(selectedOperator.offerId, currentRequest.phoneNumber)
       setRequestStatus('accepted')
     } catch (error) {
       console.error('Error accepting offer:', error)
-      alert('Failed to accept offer. Please try again.')
+      // Show more detailed error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to accept offer: ${errorMessage}`)
     }
   }
 

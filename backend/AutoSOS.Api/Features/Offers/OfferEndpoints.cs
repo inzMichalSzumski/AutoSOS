@@ -14,13 +14,101 @@ public static class OfferEndpoints
             .WithTags("Offers")
             .WithOpenApi();
 
+        // GET /api/offers/request/{requestId} - Get all offers for a request (requires ownership verification)
+        group.MapGet("/request/{requestId:guid}", async (
+            Guid requestId,
+            string phoneNumber,
+            AutoSOSDbContext db,
+            ILogger<Program> logger,
+            CancellationToken cancellationToken) =>
+        {
+            // First, verify the request exists and the phone number matches (ownership verification)
+            var request = await db.Requests.FindAsync(new object[] { requestId }, cancellationToken);
+            
+            if (request == null)
+            {
+                logger.LogWarning("Request not found: {RequestId}", requestId);
+                return Results.NotFound(new { error = "Request not found" });
+            }
+
+            // Security: Verify phone number matches request owner
+            if (request.PhoneNumber != phoneNumber)
+            {
+                logger.LogWarning(
+                    "Phone number mismatch for request {RequestId}. Unauthorized access attempt.",
+                    requestId);
+                return Results.Forbid();
+            }
+
+            // Only after verification, fetch and return offers
+            // Return logic depends on request status:
+            // - For active requests (Pending, Searching, OfferReceived): return all proposed offers
+            // - For accepted/completed requests: return only the accepted offer (user needs to see what they chose)
+            var offers = await db.Offers
+                .Include(o => o.Operator)
+                .Where(o => o.RequestId == requestId && (
+                    // For requests still receiving offers, show all proposed offers
+                    (request.Status == RequestStatus.Pending || 
+                     request.Status == RequestStatus.Searching || 
+                     request.Status == RequestStatus.OfferReceived) 
+                        ? o.Status == OfferStatus.Proposed
+                    // For accepted/in-progress requests, show the accepted offer
+                    : o.Status == OfferStatus.Accepted
+                ))
+                .OrderBy(o => o.Price)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.Price,
+                    o.EstimatedTimeMinutes,
+                    o.Status,
+                    o.CreatedAt,
+                    o.AcceptedAt,
+                    Operator = new
+                    {
+                        o.Operator.Id,
+                        o.Operator.Name,
+                        o.Operator.Phone,
+                        o.Operator.VehicleType
+                    }
+                })
+                .ToListAsync(cancellationToken);
+
+            return Results.Ok(new { offers });
+        })
+        .WithName("GetOffersForRequest")
+        .WithOpenApi();
+
         // POST /api/offers - Operator submits an offer
         group.MapPost("/", async (
             CreateOfferDto dto,
             AutoSOSDbContext db,
+            HttpContext context,
             IHubContext<RequestHub> hub,
             CancellationToken cancellationToken) =>
         {
+            // Security: Verify operator is creating their own offer
+            var tokenOperatorId = context.User.FindFirst("OperatorId")?.Value;
+            if (string.IsNullOrEmpty(tokenOperatorId) || 
+                !Guid.TryParse(tokenOperatorId, out var operatorGuid) ||
+                operatorGuid != dto.OperatorId)
+            {
+                return Results.Forbid();
+            }
+
+            // Validate price
+            if (dto.Price < 0 || dto.Price > 100000)
+            {
+                return Results.BadRequest(new { error = "Invalid price. Must be between 0 and 100000." });
+            }
+
+            // Validate estimated time
+            if (dto.EstimatedTimeMinutes.HasValue && 
+                (dto.EstimatedTimeMinutes < 0 || dto.EstimatedTimeMinutes > 1440))
+            {
+                return Results.BadRequest(new { error = "Invalid estimated time. Must be between 0 and 1440 minutes (24 hours)." });
+            }
+
             var request = await db.Requests.FindAsync(new object[] { dto.RequestId }, cancellationToken);
             if (request == null)
                 return Results.NotFound(new { error = "Request not found" });
@@ -64,14 +152,17 @@ public static class OfferEndpoints
                 offer.CreatedAt
             });
         })
+        .RequireAuthorization()
         .WithName("CreateOffer")
         .WithOpenApi();
 
         // POST /api/offers/{id}/accept - Accept offer
         group.MapPost("/{id:guid}/accept", async (
             Guid id,
+            AcceptOfferDto dto,
             AutoSOSDbContext db,
             IHubContext<RequestHub> hub,
+            ILogger<Program> logger,
             CancellationToken cancellationToken) =>
         {
             var offer = await db.Offers
@@ -80,7 +171,19 @@ public static class OfferEndpoints
                 .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
             if (offer == null)
+            {
+                logger.LogWarning("Offer not found: {OfferId}", id);
                 return Results.NotFound(new { error = "Offer not found" });
+            }
+
+            // Security: Verify phone number matches request owner
+            if (offer.Request.PhoneNumber != dto.PhoneNumber)
+            {
+                logger.LogWarning(
+                    "Phone number mismatch for offer {OfferId}. Expected: {ExpectedPhone}, Received: {ReceivedPhone}",
+                    id, offer.Request.PhoneNumber, dto.PhoneNumber);
+                return Results.Forbid();
+            }
 
             if (offer.Status != OfferStatus.Proposed)
                 return Results.BadRequest(new { error = "Offer cannot be accepted" });
@@ -101,7 +204,17 @@ public static class OfferEndpoints
                 otherOffer.Status = OfferStatus.Rejected;
             }
 
-            await db.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Another user has already modified this offer (likely accepted it)
+                return Results.Conflict(new { 
+                    error = "This offer has already been accepted by someone else. Please refresh and try again." 
+                });
+            }
 
             // Notify via SignalR
             await hub.Clients.Group($"request-{offer.Request.Id}").SendAsync("OfferAccepted", new

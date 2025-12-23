@@ -77,16 +77,27 @@ public static class RequestEndpoints
                 request.CreatedAt
             });
         })
+        .RequireRateLimiting("CreateRequestRateLimit")
         .WithName("CreateRequest")
         .WithOpenApi();
 
         // GET /api/requests/{id} - Get a specific request
-        group.MapGet("/{id:guid}", async (Guid id, AutoSOSDbContext db, CancellationToken cancellationToken) =>
+        group.MapGet("/{id:guid}", async (
+            Guid id,
+            string phoneNumber,
+            AutoSOSDbContext db,
+            CancellationToken cancellationToken) =>
         {
             var request = await db.Requests.FindAsync(new object[] { id }, cancellationToken);
 
             if (request == null)
                 return Results.NotFound();
+
+            // Security: Verify phone number matches request owner
+            if (request.PhoneNumber != phoneNumber)
+            {
+                return Results.Forbid();
+            }
 
             return Results.Ok(new
             {
@@ -182,9 +193,15 @@ public static class RequestEndpoints
                 .Select(oe => oe.EquipmentId)
                 .ToList();
 
-            // Get pending and searching requests
+            // Get all active requests that operator might be interested in
+            // This includes: new requests, requests with offers, accepted requests, and requests where operator is on the way
             var availableRequests = await db.Requests
-                .Where(r => r.Status == RequestStatus.Pending || r.Status == RequestStatus.Searching)
+                .Include(r => r.RequiredEquipment)
+                .Where(r => r.Status == RequestStatus.Pending 
+                         || r.Status == RequestStatus.Searching 
+                         || r.Status == RequestStatus.OfferReceived
+                         || r.Status == RequestStatus.Accepted
+                         || r.Status == RequestStatus.OnTheWay)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync(cancellationToken);
 
@@ -228,7 +245,7 @@ public static class RequestEndpoints
                     r.Description,
                     RequiredEquipmentId = r.RequiredEquipmentId,
                     RequiredEquipmentName = r.RequiredEquipment != null ? r.RequiredEquipment.Name : null,
-                    r.Status,
+                    Status = r.Status.ToString(), // Convert enum to string
                     r.CreatedAt,
                     Distance = Math.Round(r.Distance, 1)
                 })

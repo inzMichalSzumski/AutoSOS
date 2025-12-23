@@ -7,3 +7,7 @@ public record CreateOfferDto(
     int? EstimatedTimeMinutes
 );
 
+public record AcceptOfferDto(
+    string PhoneNumber // Phone number of the user accepting the offer
+);
+

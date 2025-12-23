@@ -104,8 +104,11 @@ class ApiClient {
     });
   }
 
-  async getRequest(id: string): Promise<any> {
-    return this.request(`/api/requests/${id}`);
+  async getRequest(id: string, phoneNumber: string): Promise<any> {
+    const params = new URLSearchParams({
+      phoneNumber: phoneNumber,
+    });
+    return this.request(`/api/requests/${id}?${params}`);
   }
 
   async cancelRequest(id: string, phoneNumber: string): Promise<{ id: string; status: string; message: string }> {
@@ -133,6 +136,25 @@ class ApiClient {
     return this.request<OperatorsResponse>(`/api/operators?${params}`);
   }
 
+  async getOffersForRequest(requestId: string, phoneNumber: string): Promise<{ offers: Array<{
+    id: string;
+    price: number;
+    estimatedTimeMinutes?: number;
+    status: string;
+    createdAt: string;
+    operator: {
+      id: string;
+      name: string;
+      phone: string;
+      vehicleType: string;
+    };
+  }> }> {
+    const params = new URLSearchParams({
+      phoneNumber: phoneNumber,
+    });
+    return this.request(`/api/offers/request/${requestId}?${params}`);
+  }
+
   async createOffer(dto: CreateOfferDto): Promise<OfferResponse> {
     return this.request<OfferResponse>('/api/offers', {
       method: 'POST',
@@ -140,9 +162,10 @@ class ApiClient {
     });
   }
 
-  async acceptOffer(offerId: string): Promise<OfferResponse> {
+  async acceptOffer(offerId: string, phoneNumber: string): Promise<OfferResponse> {
     return this.request<OfferResponse>(`/api/offers/${offerId}/accept`, {
       method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
     });
   }
 

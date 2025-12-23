@@ -16,15 +16,6 @@ public class RequestNotificationService : BackgroundService
     private const int ExpandNotificationCount = 10; // Additional 10 on expansion
     private const int NotificationTimeoutSeconds = 30; // 30 seconds for response
     private const int MaxExpansions = 3; // Maximum 3 expansions (15 + 10 + 10 + 10 = 45 operators)
-    
-    // ========================================
-    // TODO: TEMPORARY - Mock offers - to be removed when real operators are available
-    // ========================================
-    private const int MockOfferDelaySeconds = 10; // After 10 seconds create mock offer (simulates operator response)
-    private const double MockOfferProbability = 0.3; // 30% chance for mock offer from operator
-    // ========================================
-    // END OF TEMPORARY CODE - Mock offers
-    // ========================================
 
     public RequestNotificationService(
         IServiceProvider serviceProvider,
@@ -72,22 +63,16 @@ public class RequestNotificationService : BackgroundService
             // Check if request already has an offer
             var hasOffer = await db.Offers.AnyAsync(o => o.RequestId == request.Id && o.Status == OfferStatus.Proposed, cancellationToken);
             
-            // ========================================
-            // TODO: TEMPORARY - Mock offers - to be removed when real operators are available
-            // ========================================
-            // Mock: Create automatic offer after specified time (simulates operator response)
-            if (!hasOffer && secondsSinceCreation >= MockOfferDelaySeconds)
-            {
-                var random = new Random();
-                if (random.NextDouble() < MockOfferProbability)
-                {
-                    await CreateMockOfferAsync(db, hub, request, cancellationToken);
-                    continue; // We have an offer, don't expand notifications
-                }
-            }
-            // ========================================
-            // END OF TEMPORARY CODE - Mock offers
-            // ========================================
+            // DISABLED: Mock offers - operators should create offers manually
+            // if (!hasOffer && secondsSinceCreation >= MockOfferDelaySeconds)
+            // {
+            //     var random = new Random();
+            //     if (random.NextDouble() < MockOfferProbability)
+            //     {
+            //         await CreateMockOfferAsync(db, hub, request, cancellationToken);
+            //         continue;
+            //     }
+            // }
             
             if (hasOffer)
             {
@@ -221,90 +206,6 @@ public class RequestNotificationService : BackgroundService
 
     // ========================================
     // TODO: TEMPORARY - Mock offers - to be removed when real operators are available
-    // ========================================
-    private async Task CreateMockOfferAsync(
-        AutoSOSDbContext db,
-        IHubContext<RequestHub> hub,
-        Request request,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            // Find nearest available operator
-            var operators = await db.Operators
-                .Where(o => o.IsAvailable && o.CurrentLatitude.HasValue && o.CurrentLongitude.HasValue)
-                .ToListAsync(cancellationToken);
-
-            if (!operators.Any())
-            {
-                _logger.LogWarning($"No available operators for mock offer on request {request.Id}");
-                return;
-            }
-
-            var operatorsWithDistance = operators
-                .Select(op => new
-                {
-                    Operator = op,
-                    Distance = GeolocationService.CalculateDistance(
-                        request.FromLatitude,
-                        request.FromLongitude,
-                        op.CurrentLatitude!.Value,
-                        op.CurrentLongitude!.Value
-                    )
-                })
-                .Where(op => op.Distance <= (op.Operator.ServiceRadiusKm ?? 20))
-                .OrderBy(op => op.Distance)
-                .FirstOrDefault();
-
-            if (operatorsWithDistance == null)
-            {
-                _logger.LogWarning($"No operators in range for mock offer on request {request.Id}");
-                return;
-            }
-
-            var operator_ = operatorsWithDistance.Operator;
-            var random = new Random();
-            
-            // Random price between 100 and 300 PLN
-            var price = (decimal)(100 + random.NextDouble() * 200);
-            // Random time between 15 and 45 minutes
-            var estimatedTime = 15 + random.Next(30);
-
-            var offer = new Offer
-            {
-                Id = Guid.NewGuid(),
-                RequestId = request.Id,
-                OperatorId = operator_.Id,
-                Price = Math.Round(price, 2),
-                EstimatedTimeMinutes = estimatedTime,
-                Status = OfferStatus.Proposed,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            db.Offers.Add(offer);
-            request.Status = RequestStatus.OfferReceived;
-            request.UpdatedAt = DateTime.UtcNow;
-
-            await db.SaveChangesAsync(cancellationToken);
-
-            // Notify client via SignalR
-            await hub.Clients.Group($"request-{request.Id}").SendAsync("OfferReceived", new
-            {
-                offer.Id,
-                offer.Price,
-                offer.EstimatedTimeMinutes,
-                OperatorName = operator_.Name
-            }, cancellationToken);
-
-            _logger.LogInformation($"Created mock offer for request {request.Id} from operator {operator_.Name}");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Error creating mock offer for request {request.Id}");
-        }
-    }
-    // ========================================
-    // END OF TEMPORARY CODE - Mock offers
     // ========================================
 }
 

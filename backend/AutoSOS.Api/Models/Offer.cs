@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace AutoSOS.Api.Models;
 
 public class Offer
@@ -12,6 +14,13 @@ public class Offer
     public OfferStatus Status { get; set; } = OfferStatus.Proposed;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? AcceptedAt { get; set; }
+    
+    /// <summary>
+    /// Row version for optimistic concurrency control.
+    /// Automatically managed by SQL Server on each INSERT/UPDATE.
+    /// </summary>
+    [Timestamp]
+    public byte[] RowVersion { get; set; } = null!;
 }
 
 public enum OfferStatus

@@ -14,3 +14,7 @@ public record CancelRequestDto(
     string PhoneNumber
 );
 
+public record GetRequestDto(
+    string PhoneNumber // Phone number to verify ownership
+);
+

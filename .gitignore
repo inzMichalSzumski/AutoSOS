@@ -36,3 +36,8 @@ pnpm-debug.log*
 # OS
 Thumbs.db
 
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
