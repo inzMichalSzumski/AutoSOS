@@ -20,11 +20,8 @@ public static class RequestEndpoints
             CreateRequestDto dto,
             AutoSOSDbContext db,
             IHubContext<RequestHub> hub,
-            HttpContext context,
             CancellationToken cancellationToken) =>
         {
-            // Set phone number in header for rate limiting
-            context.Request.Headers["X-Phone-Number"] = dto.PhoneNumber;
             // Find or create User for the customer
             var user = await db.Users
                 .FirstOrDefaultAsync(u => u.PhoneNumber == dto.PhoneNumber && u.Role == UserRole.Customer, cancellationToken);

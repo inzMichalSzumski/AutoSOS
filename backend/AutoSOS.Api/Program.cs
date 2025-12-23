@@ -78,12 +78,44 @@ builder.Services.AddRateLimiter(options =>
         // Each phone number gets its own rate limit bucket
         var phoneNumber = "anonymous";
         
-        if (httpContext.Request.ContentType?.Contains("application/json") == true)
+        if (httpContext.Request.ContentType?.Contains("application/json") == true 
+            && httpContext.Request.Body.CanSeek)
         {
-            // Try to read phone number from request body
-            // Note: This is a simplified approach. In production, consider using a custom middleware
-            // or extracting from a header to avoid reading the body multiple times
-            phoneNumber = httpContext.Request.Headers["X-Phone-Number"].FirstOrDefault() ?? "anonymous";
+            try
+            {
+                // Enable buffering to allow reading the body multiple times
+                httpContext.Request.EnableBuffering();
+                
+                // Read the request body
+                var originalPosition = httpContext.Request.Body.Position;
+                httpContext.Request.Body.Position = 0;
+                
+                using var reader = new StreamReader(
+                    httpContext.Request.Body, 
+                    encoding: System.Text.Encoding.UTF8,
+                    detectEncodingFromByteOrderMarks: false,
+                    leaveOpen: true);
+                
+                var body = reader.ReadToEndAsync().GetAwaiter().GetResult();
+                
+                // Reset stream position for the endpoint to read
+                httpContext.Request.Body.Position = originalPosition;
+                
+                // Parse JSON to extract phone number
+                if (!string.IsNullOrEmpty(body))
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(body);
+                    if (doc.RootElement.TryGetProperty("phoneNumber", out var phoneElement))
+                    {
+                        phoneNumber = phoneElement.GetString() ?? "anonymous";
+                    }
+                }
+            }
+            catch
+            {
+                // If we can't read the body, fall back to anonymous
+                phoneNumber = "anonymous";
+            }
         }
 
         return RateLimitPartition.GetFixedWindowLimiter(phoneNumber, _ => new FixedWindowRateLimiterOptions
