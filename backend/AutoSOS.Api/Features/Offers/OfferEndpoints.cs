@@ -14,12 +14,33 @@ public static class OfferEndpoints
             .WithTags("Offers")
             .WithOpenApi();
 
-        // GET /api/offers/request/{requestId} - Get all offers for a request (public)
+        // GET /api/offers/request/{requestId} - Get all offers for a request (requires ownership verification)
         group.MapGet("/request/{requestId:guid}", async (
             Guid requestId,
+            string phoneNumber,
             AutoSOSDbContext db,
+            ILogger<Program> logger,
             CancellationToken cancellationToken) =>
         {
+            // First, verify the request exists and the phone number matches (ownership verification)
+            var request = await db.Requests.FindAsync(new object[] { requestId }, cancellationToken);
+            
+            if (request == null)
+            {
+                logger.LogWarning("Request not found: {RequestId}", requestId);
+                return Results.NotFound(new { error = "Request not found" });
+            }
+
+            // Security: Verify phone number matches request owner
+            if (request.PhoneNumber != phoneNumber)
+            {
+                logger.LogWarning(
+                    "Phone number mismatch for request {RequestId}. Unauthorized access attempt.",
+                    requestId);
+                return Results.Forbid();
+            }
+
+            // Only after verification, fetch and return offers
             var offers = await db.Offers
                 .Include(o => o.Operator)
                 .Where(o => o.RequestId == requestId && o.Status == OfferStatus.Proposed)

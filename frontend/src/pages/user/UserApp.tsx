@@ -35,10 +35,10 @@ export default function UserApp() {
     }
   }
 
-  const loadOffers = async (requestId: string) => {
+  const loadOffers = async (requestId: string, phoneNumber: string) => {
     try {
       console.log('Loading offers for request:', requestId)
-      const offersResponse = await apiClient.getOffersForRequest(requestId)
+      const offersResponse = await apiClient.getOffersForRequest(requestId, phoneNumber)
       console.log('Received offers:', offersResponse)
       
       // Update operators list with offer information
@@ -91,7 +91,7 @@ export default function UserApp() {
           // Listen for offers
           connection.on('OfferReceived', (data: { id: string; price: number; estimatedTimeMinutes?: number; OperatorName: string }) => {
             // Refresh offers list to show new offer
-            loadOffers(state.request!.id)
+            loadOffers(state.request!.id, state.request!.phoneNumber)
           })
 
           // Listen for timeout
@@ -107,7 +107,7 @@ export default function UserApp() {
       setupSignalR()
       
       // Load offers for the already created request
-      loadOffers(state.request.id)
+      loadOffers(state.request.id, state.request.phoneNumber)
       
       // Clear state after use
       window.history.replaceState({}, document.title)

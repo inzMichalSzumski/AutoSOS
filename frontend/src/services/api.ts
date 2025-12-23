@@ -136,7 +136,7 @@ class ApiClient {
     return this.request<OperatorsResponse>(`/api/operators?${params}`);
   }
 
-  async getOffersForRequest(requestId: string): Promise<{ offers: Array<{
+  async getOffersForRequest(requestId: string, phoneNumber: string): Promise<{ offers: Array<{
     id: string;
     price: number;
     estimatedTimeMinutes?: number;
@@ -149,7 +149,10 @@ class ApiClient {
       vehicleType: string;
     };
   }> }> {
-    return this.request(`/api/offers/request/${requestId}`);
+    const params = new URLSearchParams({
+      phoneNumber: phoneNumber,
+    });
+    return this.request(`/api/offers/request/${requestId}?${params}`);
   }
 
   async createOffer(dto: CreateOfferDto): Promise<OfferResponse> {
