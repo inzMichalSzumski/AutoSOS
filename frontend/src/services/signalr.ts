@@ -13,7 +13,8 @@ class SignalRService {
         return this.connection
       } catch (error) {
         console.error('Error joining request group with existing connection:', error)
-        // Connection might be stale, create new one
+        // Connection might be stale, properly stop it before creating new one
+        await this.connection.stop()
         this.connection = null
       }
     }
@@ -39,8 +40,15 @@ class SignalRService {
 
   async connectToOperatorHub(operatorId: string): Promise<signalR.HubConnection> {
     if (this.connection && this.connection.state === signalR.HubConnectionState.Connected) {
-      await this.connection.invoke('JoinOperatorGroup', operatorId)
-      return this.connection
+      try {
+        await this.connection.invoke('JoinOperatorGroup', operatorId)
+        return this.connection
+      } catch (error) {
+        console.error('Error joining operator group with existing connection:', error)
+        // Connection might be stale, properly stop it before creating new one
+        await this.connection.stop()
+        this.connection = null
+      }
     }
 
     const token = authService.getToken()
