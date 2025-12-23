@@ -15,8 +15,7 @@ namespace AutoSOS.Api.Data.Migrations
                 table: "Offers",
                 type: "rowversion",
                 rowVersion: true,
-                nullable: false,
-                defaultValue: new byte[0]);
+                nullable: false);
         }
 
         /// <inheritdoc />

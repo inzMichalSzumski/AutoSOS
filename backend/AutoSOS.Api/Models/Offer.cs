@@ -17,10 +17,10 @@ public class Offer
     
     /// <summary>
     /// Row version for optimistic concurrency control.
-    /// Automatically updated by SQL Server on each UPDATE.
+    /// Automatically managed by SQL Server on each INSERT/UPDATE.
     /// </summary>
     [Timestamp]
-    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+    public byte[] RowVersion { get; set; } = null!;
 }
 
 public enum OfferStatus

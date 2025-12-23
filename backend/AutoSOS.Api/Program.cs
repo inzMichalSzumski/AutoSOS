@@ -78,8 +78,7 @@ builder.Services.AddRateLimiter(options =>
         // Each phone number gets its own rate limit bucket
         var phoneNumber = "anonymous";
         
-        if (httpContext.Request.ContentType?.Contains("application/json") == true 
-            && httpContext.Request.Body.CanSeek)
+        if (httpContext.Request.ContentType?.Contains("application/json") == true)
         {
             try
             {
