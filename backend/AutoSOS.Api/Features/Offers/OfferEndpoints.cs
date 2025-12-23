@@ -41,9 +41,20 @@ public static class OfferEndpoints
             }
 
             // Only after verification, fetch and return offers
+            // Return logic depends on request status:
+            // - For active requests (Pending, Searching, OfferReceived): return all proposed offers
+            // - For accepted/completed requests: return only the accepted offer (user needs to see what they chose)
             var offers = await db.Offers
                 .Include(o => o.Operator)
-                .Where(o => o.RequestId == requestId && o.Status == OfferStatus.Proposed)
+                .Where(o => o.RequestId == requestId && (
+                    // For requests still receiving offers, show all proposed offers
+                    (request.Status == RequestStatus.Pending || 
+                     request.Status == RequestStatus.Searching || 
+                     request.Status == RequestStatus.OfferReceived) 
+                        ? o.Status == OfferStatus.Proposed
+                    // For accepted/in-progress requests, show the accepted offer
+                    : o.Status == OfferStatus.Accepted
+                ))
                 .OrderBy(o => o.Price)
                 .Select(o => new
                 {
@@ -52,6 +63,7 @@ public static class OfferEndpoints
                     o.EstimatedTimeMinutes,
                     o.Status,
                     o.CreatedAt,
+                    o.AcceptedAt,
                     Operator = new
                     {
                         o.Operator.Id,
