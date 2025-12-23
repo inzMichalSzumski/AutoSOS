@@ -36,12 +36,6 @@ pnpm-debug.log*
 # OS
 Thumbs.db
 
-# Terminal output artifacts (prevent accidental git output captures)
-# Files that look like partial shell commands or terminal output
-/tatus*
-/ecurity*
-/*changes*required*
-
 # Database files
 *.db
 *.db-shm
