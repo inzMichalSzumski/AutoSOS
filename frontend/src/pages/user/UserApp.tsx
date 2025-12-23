@@ -144,7 +144,7 @@ export default function UserApp() {
       connection.on('OfferReceived', (data: { id: string; price: number; estimatedTimeMinutes?: number; OperatorName: string }) => {
         console.log('Received offer via SignalR:', data)
         // Refresh offers list to show new offer
-        loadOffers(response.id)
+        loadOffers(response.id, request.phoneNumber)
       })
 
       // Listen for timeout
